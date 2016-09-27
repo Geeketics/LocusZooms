@@ -70,7 +70,7 @@ locus.zoom <- function(BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, LD.Matrix
   text(x = snp.pos, y = (p.max * 1.2), labels = SNP)
   abline(h = Nominal, col = "blue", lty = "dashed")
   abline(h = Significant, col = "red", lty = "dashed")
-  legend(x = "topleft", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), fill = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), border = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), pt.cex = 2, cex = 1.2, bty = "n")
+  legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), fill = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), border = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), pt.cex = 2, cex = 1.2, bg = "white", box.lwd = 0)
   
   ## plot 3 - where the genes are
   par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
