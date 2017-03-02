@@ -17,7 +17,7 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, LD.File = NULL, kb = NULL, Genes.Data = NULL, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
+locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, LD.File = NULL, kb = NULL, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
   # Load Data
   results.data <- data.frame(snps = SNP.List, chr = CHR, pos = BP, p = P)
   results.data[,"snps"] <- as.character(results.data[,"snps"])
@@ -57,6 +57,10 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
   }
 
+  # Remove Non-Coding Gene Info
+  if(NonCoding == FALSE){
+    genes.data <- genes.data[genes.data$Coding != "Non-Coding",]
+  }
   
   # Add LD to Results
   new.ld.data <- ld.data[,c("snps", SNP)]
@@ -79,7 +83,7 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   y.max <-  max(round.up(p.max, decimals = 0), 8)
   x.min <-  min(new.results.data.plot[,"pos"], na.rm = TRUE)
   x.max <-  max(new.results.data.plot[,"pos"], na.rm = TRUE)
-  text_offset = abs(x.max - x.min)/150 * 7
+  text_offset = abs(x.max - x.min)/150 * 15
   
   # Make Plot
   jpeg(width = 150, height = 150, units = "mm", res = 300, file = File.Name)
@@ -110,5 +114,3 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
 rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, kb, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
   
 }
-
-
