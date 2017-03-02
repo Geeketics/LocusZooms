@@ -17,26 +17,55 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom <- function(BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, LD.File = NULL, Chr = NULL, kb = NULL, Genes.Data = NULL, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
+locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, LD.File = NULL, kb = NULL, Genes.Data = NULL, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
   # Load Data
-  results.data <- data.frame(snps = SNP.List, pos = BP, p = P)
+  results.data <- data.frame(snps = SNP.List, chr = CHR, pos = BP, p = P)
   results.data[,"snps"] <- as.character(results.data[,"snps"])
+  results.data <- results.data[!duplicated(results.data$snps),]
   ld.data <- LD.File
   genes.data <- Genes.Data
 
-  # Extract Relevant LD
-  p.min <- min(results.data[,"p"], na.rm = TRUE)
-  if(is.na(SNP)){
-    SNP <- results.data[results.data[,"p"] == p.min & !is.na(results.data[,"p"]), "snps"]
+  # Reduce data to relevant segment
+  if(exists("kb") == FALSE){
+    kb <- 200000
   }
+  
+  if(is.na(SNP) & is.na(Gene)){
+    stop("You must specify a SNP or a Gene to plot")
+  }
+  
+  if(!is.na(Gene)){
+    gene.start <- genes.data[genes.data$Gene == Gene, "Start"]
+    gene.end <- genes.data[genes.data$Gene == Gene, "End"]
+    Chr <- genes.data[genes.data$Gene == Gene, "Chrom"]
+    new.results.data <- results.data[results.data$chr = Chr & results.data$BP >= (gene.start - kb) & results.data$BP <= (gene.end + kb),]
+    p.min <- min(new.results.data[,"p"], na.rm = TRUE)
+    SNP <- new.results.data[new.results.data[,"p"] == p.min & !is.na(new.results.data[,"p"]), "snps"]
+    snp.pos <- new.results.data[new.results.data[,"snps"] == SNP, "pos"]
+    snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
+    genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (gene.start - kb) & genes.data$Start < (gene.end + kb),]
+    y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
+    genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
+  } else{
+    snp.pos <- results.data[results.data[,"snps"] == SNP, "pos"]
+    Chr <- results.data[results.data[,"snps"] == SNP, "chr"]
+    new.results.data <- results.data[results.data$chr = Chr & results.data$BP >= (snp.pos - kb) & results.data$BP <= (snp.pos + kb),]
+    p.min <- min(new.results.data[,"p"], na.rm = TRUE)
+    snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
+    genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - kb) & genes.data$Start < (snp.pos + kb),]
+    y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
+    genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
+  }
+
+  
+  # Add LD to Results
   new.ld.data <- ld.data[,c("snps", SNP)]
 
-  # Add LD to Results
   round.up <- function(x, decimals = 1){
     round(x + (5 * 10 ^ (-decimals - 1)), digits = decimals)
   }
 
-  new.results.data <- merge(results.data, new.ld.data, by = "snps", all.x = TRUE)
+  new.results.data <- merge(new.results.data, new.ld.data, by = "snps", all.x = TRUE)
   new.results.data[,"plot.ld"] <- round.up(new.results.data[,SNP], decimals = 1)
   new.results.data[new.results.data[,"plot.ld"] > 1 & !is.na(new.results.data[,"plot.ld"]), "plot.ld"] = 1
   
@@ -44,20 +73,12 @@ locus.zoom <- function(BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, LD.File =
   
   new.results.data.plot <- merge(new.results.data, LD.colours, by.x = "plot.ld", by.y = "LD", all.x = TRUE)
   
+  
   # Make Plotting Variables
   p.max <- -log10(p.min)
   ymax <-  max(round.up(p.max, decimals = 0), 8)
   x.min <-  min(new.results.data.plot[,"pos"], na.rm = TRUE)
   x.max <-  max(new.results.data.plot[,"pos"], na.rm = TRUE)
-  snp.pos <- new.results.data.plot[new.results.data.plot[,"snps"] == SNP, "pos"]
-  snp.p <- -log10(results.data[results.data[,"snps"] == SNP, "p"])
-  
-  if(exists("kb") == FALSE){
-    kb <- 200000
-  }
-  genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - kb) & genes.data$Start < (snp.pos + kb),]
-  y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
-  genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
   
   # Make Plot
   jpeg(width = 1800, height = 1800, res = 300, file = File.Name)
