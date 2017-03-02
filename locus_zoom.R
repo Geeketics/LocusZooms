@@ -1,12 +1,12 @@
 ######################
-# Locus Zoom, Own LD Data
-# Sptember 2016
+# Locus Zoom, Make LD Data
+# September 2016/February 2017
 # Tanya Flynn
 # Uni of Otago
 
 ### Important Running Notes:
-## You need to give the LD.Matrix a header & column called "snps" before using - MAKE SURE YOU HAVE YOUR HEADER LABELS IN THE RIGHT ORDER!!
-## Genes.Data expects a data.frame with headers Gene, Start, End - this will be used to annotate the graph.
+## You need to have acces to the data that the associations were originally done on
+## Genes.Data expects a data.frame with headers Gene, Chrom, Start, & End - this will be used to annotate the graph.
 
 ## LD Colours
 # 1.0 - 0.8 = #FF0000
@@ -17,11 +17,11 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom <- function(BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, LD.Matrix = NULL, Chr = NULL, Genes.Data = NULL, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
+locus.zoom <- function(BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, LD.File = NULL, Chr = NULL, kb = NULL, Genes.Data = NULL, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
   # Load Data
   results.data <- data.frame(snps = SNP.List, pos = BP, p = P)
   results.data[,"snps"] <- as.character(results.data[,"snps"])
-  ld.data <- LD.Matrix
+  ld.data <- LD.File
   genes.data <- Genes.Data
 
   # Extract Relevant LD
@@ -52,6 +52,10 @@ locus.zoom <- function(BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, LD.Matrix
   snp.pos <- new.results.data.plot[new.results.data.plot[,"snps"] == SNP, "pos"]
   snp.p <- -log10(results.data[results.data[,"snps"] == SNP, "p"])
   
+  if(exists("kb") == FALSE){
+    kb <- 200000
+  }
+  genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - kb) & genes.data$Start < (snp.pos + kb),]
   y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
   genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
   
