@@ -38,7 +38,7 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     gene.start <- genes.data[genes.data$Gene == Gene, "Start"]
     gene.end <- genes.data[genes.data$Gene == Gene, "End"]
     Chr <- genes.data[genes.data$Gene == Gene, "Chrom"]
-    new.results.data <- results.data[results.data$chr = Chr & results.data$BP >= (gene.start - kb) & results.data$BP <= (gene.end + kb),]
+    new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (gene.start - kb) & results.data$pos <= (gene.end + kb),]
     p.min <- min(new.results.data[,"p"], na.rm = TRUE)
     SNP <- new.results.data[new.results.data[,"p"] == p.min & !is.na(new.results.data[,"p"]), "snps"]
     snp.pos <- new.results.data[new.results.data[,"snps"] == SNP, "pos"]
@@ -49,7 +49,7 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   } else{
     snp.pos <- results.data[results.data[,"snps"] == SNP, "pos"]
     Chr <- results.data[results.data[,"snps"] == SNP, "chr"]
-    new.results.data <- results.data[results.data$chr = Chr & results.data$BP >= (snp.pos - kb) & results.data$BP <= (snp.pos + kb),]
+    new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (snp.pos - kb) & results.data$pos <= (snp.pos + kb),]
     p.min <- min(new.results.data[,"p"], na.rm = TRUE)
     snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
     genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - kb) & genes.data$Start < (snp.pos + kb),]
@@ -76,12 +76,13 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   
   # Make Plotting Variables
   p.max <- -log10(p.min)
-  ymax <-  max(round.up(p.max, decimals = 0), 8)
+  y.max <-  max(round.up(p.max, decimals = 0), 8)
   x.min <-  min(new.results.data.plot[,"pos"], na.rm = TRUE)
   x.max <-  max(new.results.data.plot[,"pos"], na.rm = TRUE)
+  text_offset = abs(x.max - x.min)/150 * 7
   
   # Make Plot
-  jpeg(width = 1800, height = 1800, res = 300, file = File.Name)
+  jpeg(width = 150, height = 150, units = "mm", res = 300, file = File.Name)
   layout(matrix(c(1, 2, 3), byrow = TRUE), heights = c(2, 6, 3))
   
   ## plot 1 - where SNPs are
@@ -90,9 +91,9 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   
   ## plot 2 - actual manhattan p-value
   par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
-  plot(x = new.results.data.plot[,"pos"], y = -log10(new.results.data.plot[,"p"]), ylim = c(0, ymax), pch = 20, col = as.character(new.results.data.plot[,"Colour"]), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n")
+  plot(x = new.results.data.plot[,"pos"], y = -log10(new.results.data.plot[,"p"]), ylim = c(0, y.max), pch = 20, col = as.character(new.results.data.plot[,"Colour"]), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n")
   points(x = snp.pos, y = snp.p, pch = 18, cex = 2, col = "#7D26CD")
-  text(x = snp.pos, y = (p.max * 1.2), labels = SNP)
+  text(x = (snp.pos + text_offset), y = p.max, labels = SNP)
   abline(h = Nominal, col = "blue", lty = "dashed")
   abline(h = Significant, col = "red", lty = "dashed")
   legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), fill = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), border = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), pt.cex = 2, cex = 1.2, bg = "white", box.lwd = 0, title = expression("r"^2))
@@ -105,4 +106,9 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     text(x = (genes.data[gene,"Start"] + genes.data[gene,"End"])/2, y = genes.data[gene, "Y"] + 0.2, labels = genes.data[gene, "Gene"])
   }
   dev.off()
+
+rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, kb, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
+  
 }
+
+
