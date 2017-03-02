@@ -76,13 +76,14 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   LD.colours <- data.frame(LD = c(seq(from = 0, to = 1, by = 0.1), "NaN"), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2), "#7F7F7F"))
   
   new.results.data.plot <- merge(new.results.data, LD.colours, by.x = "plot.ld", by.y = "LD", all.x = TRUE)
-  
+  genes.top <- genes.data[genes.data$Y == 1.5,]
+  genes.bot <- genes.data[genes.data$Y == 0.5,]
   
   # Make Plotting Variables
   p.max <- -log10(p.min)
   y.max <-  max(round.up(p.max, decimals = 0), 8)
-  x.min <-  min(new.results.data.plot[,"pos"], na.rm = TRUE)
-  x.max <-  max(new.results.data.plot[,"pos"], na.rm = TRUE)
+  x.min <-  (snp.pos - kb)
+  x.max <-  (snp.pos + kb)
   text_offset = abs(x.max - x.min)/150 * 15
   
   # Make Plot
@@ -91,11 +92,11 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   
   ## plot 1 - where SNPs are
   par(mar = c(0.6, 4, 4, 4), mgp = c(2, 1, 0))
-  plot(x = new.results.data.plot[,"pos"], y = rep(1, times = length(new.results.data.plot[,"snps"])), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted SNPs", las = 2, main = Plot.Title)
+  plot(x = new.results.data.plot[,"pos"], y = rep(1, times = length(new.results.data.plot[,"snps"])), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted SNPs", las = 2, main = Plot.Title, xlim = c(x.min, x.max))
   
   ## plot 2 - actual manhattan p-value
   par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
-  plot(x = new.results.data.plot[,"pos"], y = -log10(new.results.data.plot[,"p"]), ylim = c(0, y.max), pch = 20, col = as.character(new.results.data.plot[,"Colour"]), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n")
+  plot(x = new.results.data.plot[,"pos"], y = -log10(new.results.data.plot[,"p"]), ylim = c(0, y.max), pch = 20, col = as.character(new.results.data.plot[,"Colour"]), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n", xlim = c(x.min, x.max))
   points(x = snp.pos, y = snp.p, pch = 18, cex = 2, col = "#7D26CD")
   text(x = (snp.pos + text_offset), y = p.max, labels = SNP)
   abline(h = Nominal, col = "blue", lty = "dashed")
@@ -105,12 +106,42 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   ## plot 3 - where the genes are
   par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
   plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", Chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
-  for(gene in 1:length(genes.data[,"Gene"])){
-    lines(x = c(genes.data[gene,"Start"], genes.data[gene,"End"]), y = c(genes.data[gene,"Y"], genes.data[gene,"Y"]), lwd = 3, col = "#000080")
-    text(x = (genes.data[gene,"Start"] + genes.data[gene,"End"])/2, y = genes.data[gene, "Y"] + 0.2, labels = genes.data[gene, "Gene"])
+  odd = 1
+  for(gene in 1:length(genes.top[,"Gene"])){
+    lines(x = c(genes.top[gene,"Start"], genes.top[gene,"End"]), y = c(genes.top[gene,"Y"], genes.top[gene,"Y"]), lwd = 3, col = "#000080")
+    if(length(genes.data[,"Gene"]) > 10){
+      length = abs(genes.top[gene,"Start"] - genes.top[gene,"End"])
+      if(length > 8000 & odd%%2 == 0){ ## using the %% tells you if a number is odd/even odd == 1, even == 0
+        text(x = (genes.top[gene,"Start"] + genes.top[gene,"End"])/2, y = genes.top[gene, "Y"] - 0.2, labels = genes.top[gene, "Gene"], cex = 0.8)
+      } else{
+        if(length > 8000 & odd%%2 == 1){
+          text(x = (genes.top[gene,"Start"] + genes.top[gene,"End"])/2, y = genes.top[gene, "Y"] + 0.2, labels = genes.top[gene, "Gene"], cex = 0.8)
+        }
+      }
+    } else{
+      text(x = (genes.top[gene,"Start"] + genes.top[gene,"End"])/2, y = genes.top[gene, "Y"] + 0.2, labels = genes.top[gene, "Gene"])
+    }
+      odd = odd + 1
+  }
+  odd = 1
+  for(gene in 1:length(genes.bot[,"Gene"])){
+    lines(x = c(genes.bot[gene,"Start"], genes.bot[gene,"End"]), y = c(genes.bot[gene,"Y"], genes.bot[gene,"Y"]), lwd = 3, col = "#000080")
+    if(length(genes.data[,"Gene"]) > 10){
+      length = abs(genes.bot[gene,"Start"] - genes.bot[gene,"End"])
+      if(length > 8000 & odd%%2 == 0){ ## using the %% tells you if a number is odd/even odd == 1, even == 0
+        text(x = (genes.bot[gene,"Start"] + genes.bot[gene,"End"])/2, y = genes.bot[gene, "Y"] - 0.2, labels = genes.bot[gene, "Gene"], cex = 0.8)
+      } else{
+        if(length > 8000 & odd%%2 == 1){
+          text(x = (genes.bot[gene,"Start"] + genes.bot[gene,"End"])/2, y = genes.bot[gene, "Y"] + 0.2, labels = genes.bot[gene, "Gene"], cex = 0.8)
+        }
+      }
+    } else{
+      text(x = (genes.bot[gene,"Start"] + genes.bot[gene,"End"])/2, y = genes.bot[gene, "Y"] + 0.2, labels = genes.bot[gene, "Gene"])
+    }
+    odd = odd + 1
   }
   dev.off()
 
-rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, kb, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
+rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, CHR, kb, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
   
 }
