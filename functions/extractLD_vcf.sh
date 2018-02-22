@@ -1,13 +1,16 @@
 #!/bin/sh
 
-vcf=$1
-chr=$2
-pos_start=$3
-pos_end=$4
-top_snp=$5
-file_prefix=$6
+# Usage: bash extractLD_vcf.sh plink_path vcf chr pos_start pos_end top_snp out_file
 
-/Users/tanyaflynn/Executables/plink-1.90b3.29/plink \
+plink_path=$1
+vcf=$2
+chr=$3
+pos_start=$4
+pos_end=$5
+top_snp=$6
+out_file=$7
+
+${plink_path}/plink \
     --vcf ${vcf} \
     --chr ${chr} \
     --from-bp ${pos_start} \
@@ -17,4 +20,4 @@ file_prefix=$6
     --ld-window-kb 100000000 \
     --ld-window-r2 0 \
     --ld-snp ${top_snp} \
-    --out ld_files/${file_prefix}
+    --out ld_files/${out_file}

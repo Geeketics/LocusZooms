@@ -17,7 +17,7 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, Region = NA, LD.File = NULL, kb = 200000, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
+locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, Region = NA, LD.File = NULL, basepairs = 200000, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
   # region specified as c(chr, start, end)
   # Load Data
   results.data <- data.frame(snps = SNP.List, chr = CHR, pos = BP, p = P)
@@ -31,33 +31,33 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     gene.start <- genes.data[genes.data$Gene == Gene, "Start"]
     gene.end <- genes.data[genes.data$Gene == Gene, "End"]
     Chr <- genes.data[genes.data$Gene == Gene, "Chrom"]
-    new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (gene.start - kb) & results.data$pos <= (gene.end + kb),]
+    new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (gene.start - basepairs) & results.data$pos <= (gene.end + basepairs),]
     p.min <- min(new.results.data[,"p"], na.rm = TRUE)
     SNP <- new.results.data[new.results.data[,"p"] == p.min & !is.na(new.results.data[,"p"]), "snps"]
     snp.pos <- new.results.data[new.results.data[,"snps"] == SNP, "pos"]
     snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
-    genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (gene.start - kb) & genes.data$Start < (gene.end + kb),]
+    genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (gene.start - basepairs) & genes.data$Start < (gene.end + basepairs),]
     y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
     genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
   } else{
     if(!is.na(SNP)){
       snp.pos <- results.data[results.data[,"snps"] == SNP, "pos"]
       Chr <- results.data[results.data[,"snps"] == SNP, "chr"]
-      new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (snp.pos - kb) & results.data$pos <= (snp.pos + kb),]
+      new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (snp.pos - basepairs) & results.data$pos <= (snp.pos + basepairs),]
       p.min <- min(new.results.data[,"p"], na.rm = TRUE)
       snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
-      genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - kb) & genes.data$Start < (snp.pos + kb),]
+      genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - basepairs) & genes.data$Start < (snp.pos + basepairs),]
     } else{
       if(!is.na(Region)[1]){
         Chr <- Region[1]
         gene.start <- Region[2]
         gene.end <- Region[3]
-        new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (gene.start - kb) & results.data$pos <= (gene.end + kb),]
+        new.results.data <- results.data[results.data$chr == Chr & results.data$pos >= (gene.start - basepairs) & results.data$pos <= (gene.end + basepairs),]
         p.min <- min(new.results.data[,"p"], na.rm = TRUE)
         SNP <- new.results.data[new.results.data[,"p"] == p.min & !is.na(new.results.data[,"p"]), "snps"]
         snp.pos <- new.results.data[new.results.data[,"snps"] == SNP, "pos"]
         snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
-        genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (gene.start - kb) & genes.data$Start < (gene.end + kb),]
+        genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (gene.start - basepairs) & genes.data$Start < (gene.end + basepairs),]
         y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
         genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
       } else{
@@ -95,11 +95,11 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   p.max <- -log10(p.min)
   y.max <-  max(round.up(p.max, decimals = 0), 8)
   if(!is.na(Gene) | !is.na(Region)[1]){
-    x.min <- (gene.start - kb)
-    x.max <- (gene.end + kb)
+    x.min <- (gene.start - basepairs)
+    x.max <- (gene.end + basepairs)
   } else{
-    x.min <- (snp.pos - kb)
-    x.max <- (snp.pos + kb)
+    x.min <- (snp.pos - basepairs)
+    x.max <- (snp.pos + basepairs)
   }
 
   text_offset = abs(x.max - x.min)/150 * 15
@@ -160,6 +160,6 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   }
   dev.off()
 
-rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, CHR, kb, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
+rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, CHR, basepairs, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
   
 }
