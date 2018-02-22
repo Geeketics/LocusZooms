@@ -17,7 +17,7 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, Region = NULL, LD.File = NULL, kb = 200000, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
+locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, Region = NA, LD.File = NULL, kb = 200000, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
   # region specified as c(chr, start, end)
   # Load Data
   results.data <- data.frame(snps = SNP.List, chr = CHR, pos = BP, p = P)
@@ -48,7 +48,7 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
       snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SNP, "p"])
       genes.data <- genes.data[genes.data$Chrom == Chr & genes.data$End > (snp.pos - kb) & genes.data$Start < (snp.pos + kb),]
     } else{
-      if(exists("Region") == TRUE){
+      if(!is.na(Region)[1]){
         Chr <- Region[1]
         gene.start <- Region[2]
         gene.end <- Region[3]
@@ -94,7 +94,7 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   # Make Plotting Variables
   p.max <- -log10(p.min)
   y.max <-  max(round.up(p.max, decimals = 0), 8)
-  if(!is.na(Gene) | exists("Region") == TRUE){
+  if(!is.na(Gene) | !is.na(Region)[1]){
     x.min <- (gene.start - kb)
     x.max <- (gene.end + kb)
   } else{
