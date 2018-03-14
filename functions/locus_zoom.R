@@ -17,7 +17,7 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, Region = NA, LD.File = NULL, basepairs = 200000, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL){
+locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = NA, Gene = NA, Region = NA, LD.File = NULL, basepairs = 200000, Genes.Data = NULL, NonCoding = FALSE, Plot.Title = NULL, Nominal = 6, Significant = 7.3, File.Name = NULL, SecondarySNP = NA){
   # region specified as c(chr, start, end)
   # Load Data
   results.data <- data.frame(snps = SNP.List, chr = CHR, pos = BP, p = P)
@@ -101,8 +101,21 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     x.min <- (snp.pos - basepairs)
     x.max <- (snp.pos + basepairs)
   }
-
-  text_offset = abs(x.max - x.min)/150 * 15
+  
+  y_offset <- y.max / 20
+  
+  if(!is.na(SecondarySNP)){
+    x_offset = abs(x.max - x.min) / 150 * 15
+    secondary.snp.pos <- new.results.data[new.results.data[,"snps"] == SecondarySNP, "pos"]
+    secondary.snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SecondarySNP, "p"])
+    secondary.label.x.offset <- secondary.snp.pos + x_offset
+    secondary.line.x.offset <- secondary.snp.pos + (x_offset / 3)
+    secondary.data <- new.results.data[new.results.data$pos > (secondary.snp.pos - (abs(x.max - x.min) / 6)) & new.results.data$pos < (secondary.snp.pos + (abs(x.max - x.min) / 6)), ]
+    secondary.label.y.offset <- -log10(min(secondary.data[, "p"])) * 1.03
+    if(abs(Nominal - secondary.label.y.offset) <= 1){
+      secondary.label.y.offset <- max(secondary.label.y.offset, Nominal) * 1.03
+    }
+  }
   
   # Make Plot
   jpeg(width = 150, height = 150, units = "mm", res = 300, file = File.Name)
@@ -116,9 +129,15 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
   plot(x = new.results.data.plot[,"pos"], y = -log10(new.results.data.plot[,"p"]), ylim = c(0, y.max), pch = 20, col = as.character(new.results.data.plot[,"Colour"]), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n", xlim = c(x.min, x.max))
   points(x = snp.pos, y = snp.p, pch = 18, cex = 2, col = "#7D26CD")
-  text(x = (snp.pos + text_offset), y = p.max, labels = SNP)
   abline(h = Nominal, col = "blue", lty = "dashed")
   abline(h = Significant, col = "red", lty = "dashed")
+  text(x = (snp.pos), y = (p.max + y_offset), labels = SNP)
+  
+  if(!is.na(SecondarySNP)){
+    text(x = secondary.label.x.offset, y = secondary.label.y.offset, labels = SecondarySNP)
+    segments(x0 = secondary.snp.pos, x1 = secondary.line.x.offset, y0 = secondary.snp.p, y1 = secondary.label.y.offset)
+  }
+  
   legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), fill = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), border = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), pt.cex = 2, cex = 1.2, bg = "white", box.lwd = 0, title = expression("r"^2))
   
   ## plot 3 - where the genes are
@@ -160,6 +179,10 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   }
   dev.off()
 
-rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, CHR, basepairs, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, text_offset)
+rm(Genes.Data, gene, genes.data, LD.colours, ld.data, LD.File, new.ld.data, new.results.data, new.results.data.plot, results.data, BP, Chr, CHR, basepairs, Nominal, P, p.max, p.min, Plot.Title, Significant, SNP, SNP.List, snp.p, snp.pos, x.max, x.min, y, y.max, y_offset)
   
+  if(!is.na(SecondarySNP)){
+    rm(x_offset, secondary.snp.pos, secondary.snp.p, secondary.label.x.offset, secondary.line.x.offset, secondary.data, secondary.label.y.offset)
+  }
+
 }
