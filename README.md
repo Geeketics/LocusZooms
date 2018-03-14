@@ -44,3 +44,6 @@ Other oppitional conditions are also available:
  - NonCoding: when using the UCSC gene list you can specify whether you want to plot the non-coding genes (defaults to FALSE)
  - Nominal: specify the nominal significance level to draw on the plot (in -log[10](_P_), default is 6 or _P_ = 1e-6)
  - Significant: specify the significance level to draw on the plot (in -log[10](_P_), default is 7.3 or _P_ = 5e-8) 
+ - SecondarySNP: provide the ID of a second SNP to be labelled (will also include an arrow)
+ 
+ 
