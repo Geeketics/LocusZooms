@@ -34,16 +34,16 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 	}
 
 	# Get start and end regions for plotting and for pulling out data:
-	if (is.na(region)) {
+	if (all(is.na(region))) {
 		# If SNP is given:
 		if (!is.na(snp)) {
 			snp.ind = which(data$SNP == snp)
 			snp.chr = data$CHR[snp.ind]
 			snp.pos = data$BP[snp.ind]
 			region = c(snp.chr, snp.pos, snp.pos)
-		} else if (!is.na(Gene)) {
+		} else if (!is.na(gene)) {
 			# If Gene is given
-			gene.ind = which(genes.data$gene == gene)
+			gene.ind = which(genes.data$Gene == gene)
 			gene.chr = genes.data$Chrom[gene.ind]
 			gene.start = genes.data$Start[gene.ind]
 			gene.end = genes.data$End[gene.ind]
@@ -52,6 +52,8 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 			# If nothing was given
 			stop("You must specify a SNP, Gene or Region to plot")
 		}
+	} else {
+		offset = 0
 	}
 
 	# Now re-define region to work with:
@@ -78,13 +80,14 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 	# Identify SNP with most significant association:
 	lead.ind = which(data$P %in% min(data$P, na.rm = T))
 	lead.snp = data$SNP[lead.ind]
+	lead.chr = data$CHR[lead.ind]
 	lead.pos = data$BP[lead.ind]
 	lead.p = data$P[lead.ind]
 
 	# If LD information is not supplied, calculate it from the 1000 genomes
 	# data:
 	if (is.null(ld.file)) {
-		ld.file = get.ld(region, snp, population)
+		ld.file = get.ld(region, lead.snp, population)
 	}
 
 	# Check if results file is rsID-based or CHR:POS-based
@@ -123,12 +126,13 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 
 	## Plot 2 - Manhattan/LocusZoom
 	par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
-	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n", xlim = c(x.min, x.max))
+	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n", xlim = c(x.min, x.max))
 	# Plot the lead SNP
 	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
 	abline(h = nominal, col = "blue", lty = "dashed")
 	abline(h = significant, col = "red", lty = "dashed")
 	text(x = lead.pos, y = (-log10(lead.p) + y_offset), labels = lead.snp)
+
 
 	# TODO: perhaps put the code block below into a separate function
 	## Extra - plotting the label/text for the secondary SNP
@@ -158,7 +162,7 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 
 	## Plot 3 - Gene tracks
 	par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
-	plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", snp.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
+	plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
 
 	# Function to plot the gene tracks and labels properly:
 	gene.position = function(data) {
@@ -188,8 +192,12 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 	genes.bot = genes.data[genes.data$Y == 0.5,]
 
 	# Plot the gene tracks:
-	gene.position(genes.top)
-	gene.position(genes.bot)
+	if (nrow(genes.top) > 0) {
+		gene.position(genes.top)
+	}
+	if (nrow(genes.bot) > 0) {
+		gene.position(genes.bot)
+	}
 
 	dev.off()
 }
