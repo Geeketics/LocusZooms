@@ -53,7 +53,7 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 			stop("You must specify a SNP, Gene or Region to plot")
 		}
 	} else {
-		offset = 0
+		offset = ifelse(is.na(offset), 0, offset)
 	}
 
 	# Now re-define region to work with:
