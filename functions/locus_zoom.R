@@ -17,7 +17,8 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondarysnp = NA, population = "EUR", sig_type = "P")
+# TODO: Add option to ignore lead variant, and use the specified SNP instead
+locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = F, population = "EUR", sig_type = "P")
 {
 	# Load Data and define constants:
 	data$SNP = as.character(data$SNP)
@@ -133,15 +134,15 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 
 	# Plot the lead SNP
 	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
-	text(x = lead.pos, y = (-log10(lead.p) + y_offset), labels = lead.snp)
+	text(x = lead.pos, y = -log10(lead.p), labels = lead.snp, pos = 3)
 
 	## Extra - plotting the label/text for the secondary SNP
-	# Calculate the coordinates to put the labels for the secondary SNP
-	if(any(!is.na(secondarysnp))){
-		check = which(data$SNP %in% secondarysnp)
+	if(any(!is.na(secondary.snp))){
+		check = which(data$SNP %in% secondary.snp)
 		if (length(check) != 0) {
-			for (i in 1:length(secondarysnp)) {
-				plot.secondary.point(data, secondarysnp[i])
+			secondary.data = data[check,]
+			for (i in 1:nrow(secondary.data)) {
+				plot.secondary.point(secondary.data, secondary.data$SNP[i], label = secondary.label)
 			}
 		} else {
 			message('There was no secondary SNP in the region you wanted to plot:\n\tPlease check the location of your secondary SNP(s) - plotting without secondary SNP(s)')
@@ -176,14 +177,15 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 
 # Function to plot secondary SNP:
 # TODO: need to consider variants with P = 0 (i.e. outside R's limit)
-plot.secondary.point <- function (data, snp) {
+plot.secondary.point <- function (data, snp, label = F) {
 	ind = which(data$SNP == snp)
 	snp = data$SNP[ind]
 	pos = data$BP[ind]
 	logp = -log10(data$P[ind])
 	points(x = pos, y = logp, pch = 1, cex = 1.1, col = "#FF0000")
-	y.offset = logp + 0.3
-	text(x = pos, y = y.offset, labels = snp, cex = 0.7)
+	if (label) {
+		text(x = pos, y = logp, labels = snp, cex = 0.7, pos = 3)
+	}
 }
 
 # Function to plot the gene tracks and labels properly:
