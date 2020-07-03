@@ -17,7 +17,7 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondarysnp = NA, population = "EUR")
+locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondarysnp = NA, population = "EUR", sig_type = "P")
 {
 	# Load Data and define constants:
 	data$SNP = as.character(data$SNP)
@@ -126,64 +126,36 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 
 	## Plot 2 - Manhattan/LocusZoom
 	par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
-	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n", xlim = c(x.min, x.max))
-	# Plot the lead SNP
-	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
+	ylab = ifelse(sig_type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
+	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
 	abline(h = nominal, col = "blue", lty = "dashed")
 	abline(h = significant, col = "red", lty = "dashed")
+
+	# Plot the lead SNP
+	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
 	text(x = lead.pos, y = (-log10(lead.p) + y_offset), labels = lead.snp)
 
-
-	# TODO: perhaps put the code block below into a separate function
 	## Extra - plotting the label/text for the secondary SNP
 	# Calculate the coordinates to put the labels for the secondary SNP
-	if(!is.na(secondarysnp)){
-		x_offset = abs(x.max - x.min) / 10
-		ind = which(data$SNP %in% secondarysnp)
-		if (length(ind) != 1) {
-			stop('The secondary SNP was not in the region you wanted to plot:\n\tPlease check the location of your secondary SNP')
+	if(any(!is.na(secondarysnp))){
+		check = which(data$SNP %in% secondarysnp)
+		if (length(check) != 0) {
+			for (i in 1:length(secondarysnp)) {
+				plot.secondary.point(data, secondarysnp[i])
+			}
+		} else {
+			message('There was no secondary SNP in the region you wanted to plot:\n\tPlease check the location of your secondary SNP(s) - plotting without secondary SNP(s)')
+			break
 		}
-		snp.pos = data$BP[ind]
-		snp.p = -log10(data$P[ind])
-		label.x.offset = snp.pos + x_offset
-		line.x.offset = snp.pos + (x_offset / 3)
-		data = data[data$BP > (snp.pos - (abs(x.max - x.min) / 6)) & data$BP < (snp.pos + (abs(x.max - x.min) / 6)), ]
-		label.y.offset = snp.p * 1.03
-		if(abs(nominal - label.y.offset) <= 1){
-			label.y.offset = max(label.y.offset, nominal) * 1.03
-		}
-		# Label the secondary SNP
-		text(x = label.x.offset, y = label.y.offset, labels = secondarysnp)
-		segments(x0 = snp.pos, x1 = line.x.offset, y0 = snp.p, y1 = label.y.offset)
 	}
 
 	# Make a legend
-	legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), fill = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), border = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), pt.cex = 2, cex = 1.2, bg = "white", box.lwd = 0, title = expression("r"^2))
+	legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080")
+	legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = expression("r"^2), inset = 0.01)
 
 	## Plot 3 - Gene tracks
 	par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
 	plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
-
-	# Function to plot the gene tracks and labels properly:
-	gene.position = function(data) {
-		odd = 1
-		for (i in 1:length(data$Gene)) {
-			lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = "#000080")
-			if(length(data$Gene) >= 10){
-				length = abs(data$Start[i] - data$End[i])
-				if(length > 8000) {
-					if (odd%%2 == 0) {
-						text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.2, labels = data$Gene[i], cex = 0.8)
-					} else {
-						text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i], cex = 0.8)
-					}
-				}
-			} else {
-				text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i])
-			}
-			odd = odd + 1
-		}
-	}
 
 	# Stagger the genes
 	y = rep(c(1.5, 0.5), times = length(genes.data$Gene))
@@ -202,6 +174,40 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 	dev.off()
 }
 
+# Function to plot secondary SNP:
+# TODO: need to consider variants with P = 0 (i.e. outside R's limit)
+plot.secondary.point <- function (data, snp) {
+	ind = which(data$SNP == snp)
+	snp = data$SNP[ind]
+	pos = data$BP[ind]
+	logp = -log10(data$P[ind])
+	points(x = pos, y = logp, pch = 1, cex = 1.1, col = "#FF0000")
+	y.offset = logp + 0.3
+	text(x = pos, y = y.offset, labels = snp, cex = 0.7)
+}
+
+# Function to plot the gene tracks and labels properly:
+# TODO: double-check this works properly (e.g. no overlapping labels)
+gene.position = function(data) {
+	odd = 1
+	for (i in 1:length(data$Gene)) {
+		lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = "#000080")
+		if(length(data$Gene) >= 10){
+			length = abs(data$Start[i] - data$End[i])
+			if(length > 8000) {
+				if (odd%%2 == 0) {
+					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.2, labels = data$Gene[i], cex = 0.8)
+				} else {
+					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i], cex = 0.8)
+				}
+			}
+		} else {
+			text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i])
+		}
+		odd = odd + 1
+	}
+}
+
 # Function to get the LD information of specified population from the 1000
 # Genomes data (March 2017 release).
 #
@@ -210,16 +216,16 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 # This function will leave/save the LD information in the working directory for
 # future reference (e.g. if the user wanted to use the same LD information)
 get.ld = function(region, snp, population) {
-	ld.snp = snp
-	# If the SNP is in CHR:POS ID, then find the rsID:
-	if (!grepl('rs', snp)) {
-		command = "awk '{print $1\":\"$2, $3}' /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/1kgp_chrZZ_biallelic_snps.txt | grep -w SNP"
-		command = gsub('ZZ', region[1], command)
-		command = gsub('SNP', snp, command)
-		rsid = system(command, intern = T)
-		rsid = unlist(strsplit(rsid, ' '))[2]
-		ld.snp = rsid
-	}
+ld.snp = snp
+# If the SNP is in CHR:POS ID, then find the rsID:
+if (!grepl('rs', snp)) {
+	command = "awk '{print $1\":\"$2, $3}' /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/1kgp_chrZZ_biallelic_snps.txt | grep -w SNP"
+	command = gsub('ZZ', region[1], command)
+	command = gsub('SNP', snp, command)
+	rsid = system(command, intern = T)
+	rsid = unlist(strsplit(rsid, ' '))[2]
+	ld.snp = rsid
+}
 
 	# gsub the command and filename for chr, start/end positions and the
 	# population:
