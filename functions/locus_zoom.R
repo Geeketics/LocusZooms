@@ -18,7 +18,7 @@
 # top-hit = #7D26CD
 
 # TODO: Add option to ignore lead variant, and use the specified SNP instead
-locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = F, population = "EUR", sig_type = "P")
+locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = F, population = "EUR", sig.type = "P", nplots = 1)
 {
 	# Load Data and define constants:
 	data$SNP = as.character(data$SNP)
@@ -115,46 +115,26 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 	x.min = region[2]
 	x.max = region[3]
 
-	y_offset = y.max / 20
-
 	# Make Plot
-	jpeg(width = 150, height = 150, units = "mm", res = 300, file = file.name)
-	layout(matrix(c(1, 2, 3), byrow = TRUE), heights = c(2, 6, 3))
 
-	## Plot 1 - SNP presence
-	par(mar = c(0.6, 4, 4, 4), mgp = c(2, 1, 0))
-	plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted SNPs", las = 2, main = plot.title, xlim = c(x.min, x.max))
+	# Define output plot size
+	if (!is.integer(nplots) && nplots <= 0) {
+		stop("You must specify number (whole integer) of loci to plot")
+	}
+	jpeg.height = (nplots * 80) + 40
+	jpeg(width = 150, height = jpeg.height, units = "mm", res = 300, file = file.name)
+	mat.row = (2 * nplots) + 1
+	locus.par = c(4, 20)
+	layout(matrix(c(1:mat.row), byrow = TRUE), heights = c(rep(locus.par, nplots), 8))
 
-	## Plot 2 - Manhattan/LocusZoom
-	par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
-	ylab = ifelse(sig_type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
-	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
-	abline(h = nominal, col = "blue", lty = "dashed")
-	abline(h = significant, col = "red", lty = "dashed")
-
-	# Plot the lead SNP
-	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
-	text(x = lead.pos, y = -log10(lead.p), labels = lead.snp, pos = 3)
-
-	## Extra - plotting the label/text for the secondary SNP
-	if(any(!is.na(secondary.snp))){
-		check = which(data$SNP %in% secondary.snp)
-		if (length(check) != 0) {
-			secondary.data = data[check,]
-			for (i in 1:nrow(secondary.data)) {
-				plot.secondary.point(secondary.data, secondary.data$SNP[i], label = secondary.label)
-			}
-		} else {
-			message('There was no secondary SNP in the region you wanted to plot:\n\tPlease check the location of your secondary SNP(s) - plotting without secondary SNP(s)')
-			break
-		}
+	# Plot N locus zooms
+	# TODO: allow plotting of locus from different data sets
+	plot.var = c(y.max, x.min, x.max, lead.snp, lead.pos, lead.p, nominal, significant)
+	for (i in 1:nplots) {
+		plot.locus(data.plot = data.plot, plot.title = plot.title, secondary.snp = secondary.snp, secondary.label = secondary.label, sig.type = sig.type, plot.var = plot.var)
 	}
 
-	# Make a legend
-	legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080")
-	legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = expression("r"^2), inset = 0.01)
-
-	## Plot 3 - Gene tracks
+	# Plot Gene tracks
 	par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
 	plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
 
@@ -175,8 +155,54 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 	dev.off()
 }
 
+plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, significant = 7.3, secondary.snp = NA, secondary.label = F, sig.type = "P", plot.var = NULL) {
+	# Variables:
+	# plot.var = c(y.max, x.min, x.max, lead.snp, lead.pos, lead.p, nominal, significant)
+	y.max = as.numeric(plot.var[1])
+	x.min = as.numeric(plot.var[2])
+	x.max = as.numeric(plot.var[3])
+	lead.snp = plot.var[4]
+	lead.pos = as.numeric(plot.var[5])
+	lead.p = as.numeric(plot.var[6])
+	nominal = as.numeric(plot.var[7])
+	significant = as.numeric(plot.var[8])
+
+	# Plot SNP presence:
+	par(mar = c(0, 4, 2, 4), mgp = c(2, 1, 0))
+	plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, xlim = c(x.min, x.max), cex.lab = 0.8)
+	title(plot.title, line = 0)
+
+	# Plot Manhattan/LocusZoom of region
+	par(mar = c(0, 4, 0, 4), mgp = c(2, 1, 0))
+	ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
+	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
+	abline(h = nominal, col = "blue", lty = "dashed")
+	abline(h = significant, col = "red", lty = "dashed")
+
+	# Plot the lead SNP
+	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
+	text(x = lead.pos, y = -log10(lead.p), labels = lead.snp, pos = 3)
+
+	# Plot label/text for the secondary SNP
+	if(any(!is.na(secondary.snp))){
+		check = which(data.plot$SNP %in% secondary.snp)
+		if (length(check) != 0) {
+			secondary.data = data.plot[check,]
+			for (i in 1:nrow(secondary.data)) {
+				plot.secondary.point(secondary.data, secondary.data$SNP[i], label = secondary.label)
+			}
+		} else {
+			message('There was no secondary SNP in the region you wanted to plot:\n\tPlease check the location of your secondary SNP(s) - plotting without secondary SNP(s)')
+			break
+		}
+	}
+
+	# Add LD legend
+	legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080")
+	legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = expression("r"^2), inset = 0.01)
+}
+
 # Function to plot secondary SNP:
-# TODO: need to consider variants with P = 0 (i.e. outside R's limit)
 plot.secondary.point <- function (data, snp, label = F) {
 	ind = which(data$SNP == snp)
 	snp = data$SNP[ind]
@@ -198,13 +224,14 @@ gene.position = function(data) {
 			length = abs(data$Start[i] - data$End[i])
 			if(length > 8000) {
 				if (odd%%2 == 0) {
-					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.2, labels = data$Gene[i], cex = 0.8)
+					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], cex = 0.8, pos = 3, cex = 0.8)
 				} else {
-					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i], cex = 0.8)
+					# TODO: double-check the pos argument
+					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], cex = 0.8, pos = 1, cex = 0.8)
 				}
 			}
 		} else {
-			text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i])
+			text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], pos = 3, cex = 0.8)
 		}
 		odd = odd + 1
 	}
