@@ -281,3 +281,14 @@ if (!grepl('rs', snp)) {
 	ld = read.table(ld.file, stringsAsFactors = F, header = T)
 	return(ld)
 }
+
+# Function to read in and pull out relevant info from PLINK clump output
+read.plink.loci = function(file = NULL) {
+	if (is.null(file)) {
+		stop('You must provide a file for reading')
+	}
+	data = read.table(file, header = T)
+	data = data[,c(1,3:5)]
+	return(data)
+}
+
