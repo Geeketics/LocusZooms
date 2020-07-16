@@ -79,16 +79,27 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   }
 
   new.results.data <- merge(new.results.data, new.ld.data, by.x = "snps", by.y = "SNP_B", all.x = TRUE)
+  new.results.data[, "R2"] <- as.numeric(new.results.data[, "R2"])
   new.results.data[,"plot.ld"] <- round.up(new.results.data[,"R2"], decimals = 1)
   new.results.data[new.results.data[,"plot.ld"] > 1 & !is.na(new.results.data[,"plot.ld"]), "plot.ld"] = 1
+  new.results.data[, "plot.ld"] <- as.character(new.results.data[, "plot.ld"])
   
-  LD.colours <- data.frame(LD = c(seq(from = 0, to = 1, by = 0.1), "NaN"), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2), "#7F7F7F"))
+  LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
   
   new.results.data.plot <- merge(new.results.data, LD.colours, by.x = "plot.ld", by.y = "LD", all.x = TRUE)
-  
-  y = rep(c(1.5, 0.5), times = length(genes.data[,"Gene"]))
+  # make all variants without an LD value grey
+  new.results.data.plot[is.na(new.results.data.plot[, "Colour"]), "Colour"] <- "#7F7F7F"
+  # sort file based on position
+  new.results.data.plot <- new.results.data.plot[order(new.results.data.plot$pos), ]
+  plot.last <- new.results.data.plot[new.results.data.plot[, "plot.ld"] > 0.2 & !is.na(new.results.data.plot[, "plot.ld"]), ]
+  new.results.data.plot <- new.results.data.plot[new.results.data.plot[, "plot.ld"] <= 0.2 | is.na(new.results.data.plot[, "plot.ld"]), ]
+  new.results.data.plot <- rbind(new.results.data.plot, plot.last)
+  rm(plot.last)
+
+  y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[,"Gene"]))
   genes.data[,"Y"] = y[1:length(genes.data[,"Gene"])]
-  genes.top <- genes.data[genes.data$Y == 1.5,]
+  genes.top <- genes.data[genes.data$Y == 2.5,]
+  genes.mid <- genes.data[genes.data$Y == 1.5,]
   genes.bot <- genes.data[genes.data$Y == 0.5,]
   
   # Make Plotting Variables
@@ -108,8 +119,13 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     x_offset = abs(x.max - x.min) / 150 * 15
     secondary.snp.pos <- new.results.data[new.results.data[,"snps"] == SecondarySNP, "pos"]
     secondary.snp.p <- -log10(new.results.data[new.results.data[,"snps"] == SecondarySNP, "p"])
-    secondary.label.x.offset <- secondary.snp.pos + x_offset
-    secondary.line.x.offset <- secondary.snp.pos + (x_offset / 3)
+    if(secondary.snp.pos < snp.pos){
+      secondary.label.x.offset <- secondary.snp.pos - x_offset
+      secondary.line.x.offset <- secondary.snp.pos - (x_offset / 3)
+    } else {
+      secondary.label.x.offset <- secondary.snp.pos + x_offset
+      secondary.line.x.offset <- secondary.snp.pos + (x_offset / 3)
+    }
     secondary.data <- new.results.data[new.results.data$pos > (secondary.snp.pos - (abs(x.max - x.min) / 6)) & new.results.data$pos < (secondary.snp.pos + (abs(x.max - x.min) / 6)), ]
     secondary.label.y.offset <- -log10(min(secondary.data[, "p"])) * 1.03
     if(abs(Nominal - secondary.label.y.offset) <= 1){
@@ -118,12 +134,12 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   }
   
   # Make Plot
-  jpeg(width = 150, height = 150, units = "mm", res = 300, file = File.Name)
-  layout(matrix(c(1, 2, 3), byrow = TRUE), heights = c(2, 6, 3))
+  jpeg(width = 150, height = 160, units = "mm", res = 300, file = File.Name)
+  layout(matrix(c(1, 2, 3), byrow = TRUE), heights = c(2, 6, 4))
   
   ## plot 1 - where SNPs are
   par(mar = c(0.6, 4, 4, 4), mgp = c(2, 1, 0))
-  plot(x = new.results.data.plot[,"pos"], y = rep(1, times = length(new.results.data.plot[,"snps"])), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted SNPs", las = 2, main = Plot.Title, xlim = c(x.min, x.max))
+  plot(x = new.results.data.plot[,"pos"], y = rep(1, times = length(new.results.data.plot[,"snps"])), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, main = Plot.Title, xlim = c(x.min, x.max))
   
   ## plot 2 - actual manhattan p-value
   par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
@@ -134,7 +150,7 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   text(x = (snp.pos), y = (p.max + y_offset), labels = SNP)
   
   if(!is.na(SecondarySNP)){
-    text(x = secondary.label.x.offset, y = secondary.label.y.offset, labels = SecondarySNP)
+    text(x = secondary.label.x.offset, y = secondary.label.y.offset, labels = SecondarySNP, cex = 0.8)
     segments(x0 = secondary.snp.pos, x1 = secondary.line.x.offset, y0 = secondary.snp.p, y1 = secondary.label.y.offset)
   }
   
@@ -142,7 +158,8 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
   
   ## plot 3 - where the genes are
   par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
-  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", Chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
+  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", Chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,3))
+  # plot first line of genes
   odd = 1
   for(gene in 1:length(genes.top[,"Gene"])){
     lines(x = c(genes.top[gene,"Start"], genes.top[gene,"End"]), y = c(genes.top[gene,"Y"], genes.top[gene,"Y"]), lwd = 3, col = "#000080")
@@ -160,6 +177,25 @@ locus.zoom <- function(CHR = NULL, BP = NULL, P = NULL, SNP.List = NULL, SNP = N
     }
       odd = odd + 1
   }
+  # plot middle line of genes
+  odd = 1
+  for(gene in 1:length(genes.mid[,"Gene"])){
+    lines(x = c(genes.mid[gene,"Start"], genes.mid[gene,"End"]), y = c(genes.mid[gene,"Y"], genes.mid[gene,"Y"]), lwd = 3, col = "#000080")
+    if(length(genes.data[,"Gene"]) >= 10){
+      length = abs(genes.mid[gene,"Start"] - genes.mid[gene,"End"])
+      if(length > 8000 & odd%%2 == 0){ ## using the %% tells you if a number is odd/even odd == 1, even == 0
+        text(x = (genes.mid[gene,"Start"] + genes.mid[gene,"End"])/2, y = genes.mid[gene, "Y"] - 0.2, labels = genes.mid[gene, "Gene"], cex = 0.8)
+      } else{
+        if(length > 8000 & odd%%2 == 1){
+          text(x = (genes.mid[gene,"Start"] + genes.mid[gene,"End"])/2, y = genes.mid[gene, "Y"] + 0.2, labels = genes.mid[gene, "Gene"], cex = 0.8)
+        }
+      }
+    } else{
+      text(x = (genes.mid[gene,"Start"] + genes.mid[gene,"End"])/2, y = genes.mid[gene, "Y"] + 0.2, labels = genes.mid[gene, "Gene"])
+    }
+    odd = odd + 1
+  }
+  # plot third line of genes
   odd = 1
   for(gene in 1:length(genes.bot[,"Gene"])){
     lines(x = c(genes.bot[gene,"Start"], genes.bot[gene,"End"]), y = c(genes.bot[gene,"Y"], genes.bot[gene,"Y"]), lwd = 3, col = "#000080")
