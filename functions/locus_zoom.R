@@ -17,41 +17,29 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
-locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondarysnp = NA, population = "EUR")
+# TODO: Add option to ignore lead variant, and use the specified SNP instead
+locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = F, population = "EUR", sig.type = "P", nplots = F, ignore.lead = F, rsid.check = T)
 {
 	# Load Data and define constants:
-	data$SNP = as.character(data$SNP)
 	LD.colours = data.frame(LD = c(seq(from = 0, to = 1, by = 0.1), "NaN"), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2), "#7F7F7F"))
 
-	# Stop if CHR:POS ID, but with no alias:
-	if (!grepl('rs', snp) & is.null(alias)) {
-		stop("You didn't provide an alias for your CHR:POS ID")
+	# If plotting multiple summary stats, take the first summary stats as
+	# lead/reference data:
+	if (is.data.frame(data)) {
+		lead.data = data
+	} else {
+		lead.data = data[[1]]
 	}
+	lead.data$SNP = as.character(lead.data$SNP)
 
-	# Stop if there are duplicate SNPs:
-	if (length(which(duplicated(data$SNP))) > 0) {
-		stop('There are duplicates in your results file - Please remove them before running again')
+	# Check the SNPs are in rsID format and no duplicates:
+	if (rsid.check) {
+		check.rsid(lead.data$SNP)
 	}
 
 	# Get start and end regions for plotting and for pulling out data:
 	if (all(is.na(region))) {
-		# If SNP is given:
-		if (!is.na(snp)) {
-			snp.ind = which(data$SNP == snp)
-			snp.chr = data$CHR[snp.ind]
-			snp.pos = data$BP[snp.ind]
-			region = c(snp.chr, snp.pos, snp.pos)
-		} else if (!is.na(gene)) {
-			# If Gene is given
-			gene.ind = which(genes.data$Gene == gene)
-			gene.chr = genes.data$Chrom[gene.ind]
-			gene.start = genes.data$Start[gene.ind]
-			gene.end = genes.data$End[gene.ind]
-			region = c(gene.chr, gene.start, gene.end)
-		} else {
-			# If nothing was given
-			stop("You must specify a SNP, Gene or Region to plot")
-		}
+		region = get.region(lead.data, snp, genes.data, gene)
 	} else {
 		offset = ifelse(is.na(offset), 0, offset)
 	}
@@ -72,17 +60,32 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 		genes.data = genes.data[genes.data$Coding != "Non-Coding",]
 	}
 
-	# Likewise, pull out the relevant data from the results file:
-	data = data[data$CHR == region[1], ]
-	data = data[data$BP >= region[2], ]
-	data = data[data$BP <= region[3], ]
+	# Likewise, pull out the relevant data from the result file(s), and log
+	# P-value:
+	if (is.data.frame(data)) {
+		data = subset.data(data, region)
+		data$logP = as.numeric(unlist(lapply(data$P, elog10)))
+		lead.data = data
+	} else {
+		data = lapply(data, function(x) subset.data(x, region))
+		data$logP = as.numeric(unlist(lapply(data$P, elog10)))
+		lead.data = data[[1]]
+	}
 
-	# Identify SNP with most significant association:
-	lead.ind = which(data$P %in% min(data$P, na.rm = T))
-	lead.snp = data$SNP[lead.ind]
-	lead.chr = data$CHR[lead.ind]
-	lead.pos = data$BP[lead.ind]
-	lead.p = data$P[lead.ind]
+	# Get info on lead variant:
+	if (ignore.lead) {
+		if (is.na(snp)) {
+			stop("You must provide a SNP with ignore.lead option")
+		}
+		lead.ind = which(lead.data$SNP == snp)
+	} else {
+		lead.ind = which(lead.data$logP %in% max(lead.data$logP, na.rm = T))[1]
+	}
+
+	lead.snp = lead.data$SNP[lead.ind]
+	lead.chr = lead.data$CHR[lead.ind]
+	lead.pos = lead.data$BP[lead.ind]
+	lead.logp = lead.data$logP[lead.ind]
 
 	# If LD information is not supplied, calculate it from the 1000 genomes
 	# data:
@@ -90,116 +93,223 @@ locus.zoom = function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = N
 		ld.file = get.ld(region, lead.snp, population)
 	}
 
+	# TODO: Do I really need this after the check.rsid() function?
 	# Check if results file is rsID-based or CHR:POS-based
-	if (length(which(grepl('rs', data$SNP))) < 1) {
-		ld.file$SNP_B = paste(ld.file$CHR_B, ld.file$BP_B, sep = ':')
-	}
+	# if (length(which(grepl('rs', data$SNP))) < 1) {
+		# ld.file$SNP_B = paste(ld.file$CHR_B, ld.file$BP_B, sep = ':')
+	# }
 
 	# Add LD to Results
 	new.ld.file = ld.file[,c("SNP_B", "R2")]
 
-	round.up = function(x, decimals = 1){
-		round(x + (5 * 10 ^ (-decimals - 1)), digits = decimals)
+	if (is.data.frame(data)) {
+		data.plot = merge.plot.dat(data, new.ld.file, LD.colours)
+	} else {
+		data.plot = lapply(data, function(x) merge.plot.dat(x, new.ld.file, LD.colours))
 	}
 
-	data = merge(data, new.ld.file, by.x = "SNP", by.y = "SNP_B", all.x = TRUE)
+	# Make Plot
 
-	data$plot.ld = round.up(data$R2, decimals = 1)
-	data$plot.ld[data$plot.ld > 1 & !is.na(data$plot.ld)] = 1
-
-	data.plot = merge(data, LD.colours, by.x = "plot.ld", by.y = "LD", all.x = TRUE)
+	# Define output plot size
+	npanel = ifelse(nplots, length(data), 1)
+	jpeg.height = (npanel * 80) + 40
+	jpeg(width = 150, height = jpeg.height, units = "mm", res = 300, file = file.name)
+	mat.row = (2 * npanel) + 1
+	locus.par = c(4, 20)
+	layout(matrix(c(1:mat.row), byrow = TRUE), heights = c(rep(locus.par, npanel), 8))
 
 	# Make Plotting Variables
-	y.max = max(-log10(lead.p), 8)
 	x.min = region[2]
 	x.max = region[3]
 
-	y_offset = y.max / 20
-
-	# Make Plot
-	jpeg(width = 150, height = 150, units = "mm", res = 300, file = file.name)
-	layout(matrix(c(1, 2, 3), byrow = TRUE), heights = c(2, 6, 3))
-
-	## Plot 1 - SNP presence
-	par(mar = c(0.6, 4, 4, 4), mgp = c(2, 1, 0))
-	plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted SNPs", las = 2, main = plot.title, xlim = c(x.min, x.max))
-
-	## Plot 2 - Manhattan/LocusZoom
-	par(mar = c(0.5, 4, 0.6, 4), mgp = c(2, 1, 0))
-	plot(x = data.plot$BP, y = -log10(data.plot$P), ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = expression(-log[10](italic(P))), cex = 1.5, xaxt = "n", xlim = c(x.min, x.max))
-	# Plot the lead SNP
-	points(x = lead.pos, y = -log10(lead.p), pch = 18, cex = 2, col = "#7D26CD")
-	abline(h = nominal, col = "blue", lty = "dashed")
-	abline(h = significant, col = "red", lty = "dashed")
-	text(x = lead.pos, y = (-log10(lead.p) + y_offset), labels = lead.snp)
-
-
-	# TODO: perhaps put the code block below into a separate function
-	## Extra - plotting the label/text for the secondary SNP
-	# Calculate the coordinates to put the labels for the secondary SNP
-	if(!is.na(secondarysnp)){
-		x_offset = abs(x.max - x.min) / 10
-		ind = which(data$SNP %in% secondarysnp)
-		if (length(ind) != 1) {
-			stop('The secondary SNP was not in the region you wanted to plot:\n\tPlease check the location of your secondary SNP')
+	# Plot N locus zooms
+	if (npanel > 1) {
+		for (i in 1:npanel) {
+			# Set y.max:
+			tmp.dat = data.plot[[i]]
+			y.max = max(data.plot$logP, 8)
+			plot.var = c(y.max, x.min, x.max, lead.snp, nominal, significant)
+			plot.locus(data.plot = data.plot[[i]], plot.title = names(data.plot)[i], secondary.snp = secondary.snp, secondary.label = secondary.label, sig.type = sig.type, plot.var = plot.var)
 		}
-		snp.pos = data$BP[ind]
-		snp.p = -log10(data$P[ind])
-		label.x.offset = snp.pos + x_offset
-		line.x.offset = snp.pos + (x_offset / 3)
-		data = data[data$BP > (snp.pos - (abs(x.max - x.min) / 6)) & data$BP < (snp.pos + (abs(x.max - x.min) / 6)), ]
-		label.y.offset = snp.p * 1.03
-		if(abs(nominal - label.y.offset) <= 1){
-			label.y.offset = max(label.y.offset, nominal) * 1.03
-		}
-		# Label the secondary SNP
-		text(x = label.x.offset, y = label.y.offset, labels = secondarysnp)
-		segments(x0 = snp.pos, x1 = line.x.offset, y0 = snp.p, y1 = label.y.offset)
+	} else {
+		y.max = max(data.plot$logP, 8)
+		plot.var = c(y.max, x.min, x.max, lead.snp, nominal, significant)
+		plot.locus(data.plot = data.plot, plot.title = plot.title, secondary.snp = secondary.snp, secondary.label = secondary.label, sig.type = sig.type, plot.var = plot.var)
 	}
 
-	# Make a legend
-	legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), fill = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), border = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080"), pt.cex = 2, cex = 1.2, bg = "white", box.lwd = 0, title = expression("r"^2))
-
-	## Plot 3 - Gene tracks
+	# Plot Gene tracks
 	par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
 	plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0,2))
 
-	# Function to plot the gene tracks and labels properly:
-	gene.position = function(data) {
-		odd = 1
-		for (i in 1:length(data$Gene)) {
-			lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = "#000080")
-			if(length(data$Gene) >= 10){
-				length = abs(data$Start[i] - data$End[i])
-				if(length > 8000) {
-					if (odd%%2 == 0) {
-						text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.2, labels = data$Gene[i], cex = 0.8)
-					} else {
-						text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i], cex = 0.8)
-					}
-				}
-			} else {
-				text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] + 0.2, labels = data$Gene[i])
-			}
-			odd = odd + 1
+	# Stagger the genes
+	if (nrow(genes.data) != 0) {
+		y = rep(c(1.3, 0.4), times = length(genes.data$Gene))
+		genes.data$Y = y[1:length(genes.data$Gene)]
+		genes.top = genes.data[genes.data$Y == 1.3,]
+		genes.bot = genes.data[genes.data$Y == 0.4,]
+
+		# Plot the gene tracks:
+		if (nrow(genes.top) > 0) {
+			gene.position(genes.top)
+		}
+		if (nrow(genes.bot) > 0) {
+			gene.position(genes.bot)
 		}
 	}
 
-	# Stagger the genes
-	y = rep(c(1.5, 0.5), times = length(genes.data$Gene))
-	genes.data$Y = y[1:length(genes.data$Gene)]
-	genes.top = genes.data[genes.data$Y == 1.5,]
-	genes.bot = genes.data[genes.data$Y == 0.5,]
-
-	# Plot the gene tracks:
-	if (nrow(genes.top) > 0) {
-		gene.position(genes.top)
-	}
-	if (nrow(genes.bot) > 0) {
-		gene.position(genes.bot)
-	}
-
 	dev.off()
+}
+
+plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, significant = 7.3, secondary.snp = NA, secondary.label = F, sig.type = "P", plot.var = NULL, ignore.lead = F) {
+	# Variables:
+	y.max = as.numeric(plot.var[1])
+	x.min = as.numeric(plot.var[2])
+	x.max = as.numeric(plot.var[3])
+	lead.snp = plot.var[4]
+	nominal = as.numeric(plot.var[5])
+	significant = as.numeric(plot.var[6])
+
+	# Plot SNP presence:
+	par(mar = c(0, 4, 2, 4), mgp = c(2, 1, 0))
+	plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, xlim = c(x.min, x.max), cex.lab = 0.8)
+	title(plot.title, line = 0)
+
+	# Plot Manhattan/LocusZoom of region
+	par(mar = c(0, 4, 0, 4), mgp = c(2, 1, 0))
+	ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
+	plot(x = data.plot$BP, y = data.plot$logP, ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
+	abline(h = nominal, col = "blue", lty = "dashed")
+	abline(h = significant, col = "red", lty = "dashed")
+
+	# Plot the lead SNP and remove it from the list of secondary SNPs, if present:
+	if (lead.snp %in% data.plot$SNP) {
+		ind = which(data.plot$SNP == lead.snp)
+		lead.pos = data.plot$BP[ind]
+		lead.logp = data.plot$logP[ind]
+		points(x = lead.pos, y = lead.logp, pch = 5, cex = 0.8, col = "#FF0000")
+		points(x = lead.pos, y = lead.logp, pch = 18, cex = 1, col = "#7D26CD")
+		text(x = lead.pos, y = lead.logp, labels = lead.snp, pos = 3)
+		secondary.snp = secondary.snp[which(secondary.snp != lead.snp)]
+	}
+
+	# Plot label/text for the secondary SNP
+	if(any(!is.na(secondary.snp))){
+		check = which(data.plot$SNP %in% secondary.snp)
+		if (length(check) != 0) {
+			secondary.data = data.plot[check,]
+			for (i in 1:nrow(secondary.data)) {
+				plot.secondary.point(secondary.data, secondary.data$SNP[i], label = secondary.label)
+			}
+		}
+	}
+
+	# Add LD legend
+	legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080")
+	legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = expression("r"^2), inset = 0.01)
+}
+
+# Function to check if the input variants are have rsID
+check.rsid <- function(snp = NULL) {
+	# Stop if CHR:POS ID:
+	if (all(!grepl('rs', snp))) {
+		stop("You didn't provide rsID")
+	}
+	# Stop if there are duplicate SNPs:
+	if (length(which(duplicated(snp))) > 0) {
+		stop('There are duplicate rsIDs in your results file - Please remove them before running again')
+	}
+}
+
+# Function to make regions out of variant or gene information
+get.region <- function(snp.dat, snp, gene.dat, gene) {
+	# If SNP is given:
+	if (!is.na(snp)) {
+		snp.ind = which(snp.dat$SNP == snp)
+		snp.chr = snp.dat$CHR[snp.ind]
+		snp.pos = snp.dat$BP[snp.ind]
+		region = c(snp.chr, snp.pos, snp.pos)
+	} else if (!is.na(gene)) {
+		# If Gene is given
+		gene.ind = which(gene.dat$Gene == gene)
+		gene.chr = gene.dat$Chrom[gene.ind]
+		gene.start = gene.dat$Start[gene.ind]
+		gene.end = gene.dat$End[gene.ind]
+		region = c(gene.chr, gene.start, gene.end)
+	} else {
+		# If nothing was given
+		stop("You must specify a SNP, Gene or Region to plot")
+	}
+	return(region)
+}
+
+# Function to subset relevant region from a dataset
+subset.data <- function(data, region) {
+	res = data
+	res = res[res$CHR == region[1], ]
+	res = res[res$BP >= region[2], ]
+	res = res[res$BP <= region[3], ]
+	return(res)
+}
+
+round.up = function(x, decimals = 1){
+	round(x + (5 * 10 ^ (-decimals - 1)), digits = decimals)
+}
+
+# Function to merge the LD and LD colours with the relevant region of the
+# summary stats:
+merge.plot.dat <- function(data, ld.file, LD.colours) {
+	res = merge(data, ld.file, by.x = "SNP", by.y = "SNP_B", all.x = TRUE)
+	res$plot.ld = round.up(res$R2, decimals = 1)
+	res$plot.ld[res$plot.ld > 1 & !is.na(res$plot.ld)] = 1
+	res = merge(res, LD.colours, by.x = "plot.ld", by.y = "LD", all.x = TRUE)
+	return(res)
+}
+
+# Function to plot secondary SNP:
+plot.secondary.point <- function(data, snp, label = F) {
+	ind = which(data$SNP == snp)
+	snp = data$SNP[ind]
+	pos = data$BP[ind]
+	logp = data$logP[ind]
+	points(x = pos, y = logp, pch = 1, cex = 1.1, col = "#FF0000")
+	if (label) {
+		text(x = pos, y = logp, labels = snp, cex = 0.7, pos = 3)
+	}
+}
+
+# Function to plot the gene tracks and labels properly:
+# TODO: double-check this works properly (e.g. no overlapping labels)
+gene.position = function(data) {
+	odd = 1
+	for (i in 1:length(data$Gene)) {
+		lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = "#000080")
+		if(length(data$Gene) >= 10){
+			length = abs(data$Start[i] - data$End[i])
+			if(length > 8000) {
+				if (odd%%2 == 0) {
+					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], cex = 0.8, pos = 3)
+				} else {
+					# TODO: double-check the pos argument
+					text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], cex = 0.8, pos = 1)
+				}
+			}
+		} else {
+			text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], pos = 3, cex = 0.8)
+		}
+		odd = odd + 1
+	}
+}
+
+# Function to convert string P-value into logged P:
+elog10 <- function(p) {
+	if (is.character(p) & grepl('e-', p)) {
+		split_p <- base::strsplit(p, split = "e-")
+		tmp <- unlist(split_p)
+		res <- as.numeric(tmp[2]) - log10(as.numeric(tmp[1]))
+	} else {
+		res <- -log10(as.numeric(p))
+	}
+	return(res)
 }
 
 # Function to get the LD information of specified population from the 1000
@@ -245,4 +355,14 @@ get.ld = function(region, snp, population) {
 	# Import the ld file and return the data
 	ld = read.table(ld.file, stringsAsFactors = F, header = T)
 	return(ld)
+}
+
+# Function to read in and pull out relevant info from PLINK clump output
+read.plink.loci = function(file = NULL) {
+	if (is.null(file)) {
+		stop('You must provide a file for reading')
+	}
+	data = read.table(file, stringsAsFactors = F, header = T)
+	data = data[,c(1,3:5)]
+	return(data)
 }
