@@ -200,8 +200,7 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
     ind = which(data.plot$SNP == lead.snp)
     lead.pos = data.plot$BP[ind]
     lead.logp = data.plot$logP[ind]
-    points(x = lead.pos, y = lead.logp, pch = 5, cex = 0.8, col = "#FF0000")
-    points(x = lead.pos, y = lead.logp, pch = 18, cex = 1, col = "#7D26CD")
+    points(x = lead.pos, y = lead.logp, pch = 18, cex = 1.5, col = "#7D26CD")
     text(x = lead.pos, y = lead.logp, labels = lead.snp, pos = 3)
     secondary.snp = secondary.snp[which(secondary.snp != lead.snp)]
   }
@@ -212,7 +211,7 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
     if (length(check) != 0) {
       secondary.data = data.plot[check, ]
       for (i in 1:nrow(secondary.data)) {
-        plot.secondary.point(secondary.data, secondary.data$SNP[i], label = secondary.label)
+        plot.secondary.point(data = secondary.data, snp = secondary.data$SNP[i], lead.snp = lead.snp, plot.var = plot.var, nominal = nominal, label = secondary.label)
       }
     }
   }
@@ -290,16 +289,47 @@ merge.plot.dat <- function(data, ld.file, LD.colours) {
 }
 
 # Function to plot secondary SNP:
-plot.secondary.point <- function(data, snp, label = FALSE) {
+plot.secondary.point <- function(data, snp, lead.snp, plot.var, nominal, label = FALSE) {
+  # save out variables
   ind = which(data$SNP == snp)
   snp = data$SNP[ind]
   pos = data$BP[ind]
   logp = data$logP[ind]
+  lead.ind = which(data$SNP == lead.snp)
+  lead.pos = data$BP[ind]
+
+  # plot red line around secondary SNP
   points(x = pos, y = logp, pch = 1, cex = 1.1, col = "#FF0000")
+
   if (label) {
-    text(x = pos, y = logp, labels = snp, cex = 0.7, pos = 3)
+  # set up labelling offsets (x-axis)
+    x.min = as.numeric(plot.var[2])
+    x.max = as.numeric(plot.var[3])
+    x.offset = abs(x.max - x.min) / 150 * 15
+    
+    if(pos < lead.pos) {
+      label.x.offset = pos - x.offset
+      line.x.offset = pos - (x.offset / 3)
+      side = 1
+    } else {
+      label.x.offset = pos + x.offset
+      line.x.offset = pos + (x.offset / 3)
+      side = 0
+    }
+    
+    # set up labelling offsets (y-axis) - considers SNPs around it  
+    surrounding.data = data[data$BP > (pos - (abs(x.max - x.min) / 6)) & data$BP < (pos + (abs(x.max - x.min) / 6)), ]
+    label.y.offset = max(surrounding.data$logP) * 1.03
+    if(abs(nominal - label.y.offset) <= 1) {
+      label.y.offset <- max(label.y.offset, nominal) * 1.03
+    }
+    
+    # add lines and text to label SNP
+    text(x = label.x.offset, y = (label.y.offset * 1.01), labels = snp, cex = 0.7, adj = c(1, side))
+    segments(x0 = pos, x1 = line.x.offset, y0 = logp, y1 = label.y.offset)
   }
 }
+
 
 # Function to plot the gene tracks and labels properly:
 gene.position <- function(data) {
@@ -308,16 +338,19 @@ gene.position <- function(data) {
     lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = "#000080")
     if(length(data$Gene) >= 10){
       length = abs(data$Start[i] - data$End[i])
-      if(length > 8000) {
+      if(length > 5000) {
         if (odd%%2 == 0) {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], cex = 0.8, pos = 3)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], font = 3, cex = 0.7, pos = 3)
         } else {
-          # TODO: double-check the pos argument
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], cex = 0.8, pos = 1)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.7, pos = 1)
         }
       }
     } else {
-      text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], pos = 3, cex = 0.8)
+      if (odd%%2 == 0) {
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], font = 3, cex = 0.7, pos = 3)
+      } else {
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.7, pos = 1)
+      }
     }
     odd = odd + 1
   }
@@ -342,12 +375,13 @@ get.ld <- function(region, snp, population) {
   ld.snp = snp
 
   # gsub the command and filename for chr, start/end positions and the population:
-  base.command = "bcftools view \
+  base.command = "source ~/.bashrc;
+  bcftools view \
     --regions ZZ:Y1-Y2 \
     --output-type z \
     --output-file tmp.vcf.gz \
-    /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz
-  &&
+    /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz;
+
   plink2 \
     --vcf tmp.vcf.gz \
     --allow-no-sex \
@@ -356,10 +390,11 @@ get.ld <- function(region, snp, population) {
     --inter-chr \
     --ld-snp SNP \
     --ld-window-r2 0 \
-    --out POP_region_ZZ.Y1-Y2_SNP
-  &&
+    --out POP_region_ZZ.Y1-Y2_SNP;
+
   rm tmp.vcf.gz POP_region_ZZ.Y1-Y2_SNP.nosex"
   
+  base.command = gsub(pattern = "\n ", replacement = "", base.command)
   base.command = gsub(pattern = 'ZZ', replacement = region[1], base.command)
   base.command = gsub(pattern = 'Y1', replacement = region[2], base.command)
   base.command = gsub(pattern = 'Y2', replacement = region[3], base.command)

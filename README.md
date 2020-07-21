@@ -6,7 +6,7 @@ This script creates an R function to create regional Manhattan plots with points
   - Example.assoc.linear: A file of PLINK association results (only the SNP, BP, and P columns are essential)
   - Example.ld: A file of the LD between the SNP to be labelled (top-hit / SNP of interest) and the SNPs included in the PLINK results file
     - this file MUST have a column called "SNP_B" (containing a list of all the SNPs in the results file) and a column called "R2" (containing the R^2 LD value of each SNP). The SNP names MUST match the names in the SNP column of the results file.
-    - this file can be created for you by the locus_zoom.R script IF you have access to the Biochem servers and have rsIDs in your results file
+    - this file can be created for you by the locus_zoom.R script IF you have access to the Biochem servers and have rsIDs in your results file, if you are running it on your local machine you will also need to ensure bcftools and plink2 are installed
   - Example.genes: A file of the genes within the region for use in the annotation step. This file must have 3 columns, Gene, Start, End. The UCSC_GRCh37_Genes_UniqueList.txt file can be used as this file.
 
 ### Example locus.zoom run:
@@ -22,11 +22,14 @@ source("functions/locus_zoom.R")
 
 # create a LocusZoom-like plot
 locus.zoom(data = Example.assoc.linear,                                    # a data.frame (or a list of data.frames) with the columns CHR, BP, SNP, and P
-           snp = "rs1008400",                                              # the SNP to be labelled in the plot
+           region = c(16, 53340000, 54550000),                             # the chromosome region to be included in the plot
+           offset_bp = 0,                                                  # how many basepairs around the SNP / gene / region of interest to plot
            ld.file = Example.ld,                                           # a file with LD values relevant to the SNP specified above
            genes.data = UCSC_GRCh37_Genes_UniqueList.txt,                  # a file of all the genes in the region / genome
            plot.title = "Association of FTO with BMI in Europeans",        # the plot title
-           file.name = "Example.jpg")                                      # the name of the file to save the plot to
+           file.name = "Example.jpg",                                      # the name of the file to save the plot to
+           secondary.snp = c("rs1121980", "rs8060235"),                    # a list of SNPs to label on the plot
+           secondary.label = TRUE)                                         # TRUE/FALSE whether to add rsIDs of secondary SNPs to plot
 ```
 
 One of `snp`, `gene`, or `region` must be specified to create the plot:
