@@ -3,11 +3,11 @@
 
 This script creates an R function to create regional Manhattan plots with points coloured according to LD and genes annotated beneath. Three example input files are included for test purposes, along with an example .jpg output.
 
-  - Example.assoc.linear: A file of PLINK association results (only the SNP, BP, and P columns are essential)
+  - Example.assoc.linear: A file of PLINK association results (only the "CHR", "SNP", "BP", and "P" columns are essential)
   - Example.ld: A file of the LD between the SNP to be labelled (top-hit / SNP of interest) and the SNPs included in the PLINK results file
     - this file MUST have a column called "SNP_B" (containing a list of all the SNPs in the results file) and a column called "R2" (containing the R^2 LD value of each SNP). The SNP names MUST match the names in the SNP column of the results file.
-    - this file can be created for you by the locus_zoom.R script IF you have access to the Biochem servers and have rsIDs in your results file, if you are running it on your local machine you will also need to ensure bcftools and plink2 are installed
-  - Example.genes: A file of the genes within the region for use in the annotation step. This file must have 3 columns, Gene, Start, End. The UCSC_GRCh37_Genes_UniqueList.txt file can be used as this file.
+    - this file can be created for you by the locus_zoom.R script IF you have access to the Biochem servers and have rsIDs in your results file, if you are running this script on your local machine you will also need to ensure bcftools and plink2 are installed
+  - Example.genes: A file of the genes within the region for use in the annotation step. This file must have 4 columns, "Gene", "Chrom", "Start", "End". The UCSC_GRCh37_Genes_UniqueList.txt file can be used as this file.
 
 ### Example locus.zoom run:
 
@@ -32,15 +32,26 @@ locus.zoom(data = Example.assoc.linear,                                    # a d
            secondary.label = TRUE)                                         # TRUE/FALSE whether to add rsIDs of secondary SNPs to plot
 ```
 
+![](Example.jpg)
+
+Compulsory flags:
+
 One of `snp`, `gene`, or `region` must be specified to create the plot:
 
- - snp: specify the SNP to be annotated
- - gene: specify the Gene to make the plot around
- - region: specify the chromsome region you want to plot (must be specified as `c(chr, start, end)`
+ - `snp`: specify the SNP to be annotated
+ - `gene`: specify the Gene to make the plot around
+ - `region`: specify the chromsome region you want to plot (must be specified as `c(chr, start, end)`
 
+As well as each of the following:
 
-Other oppitional conditions are also available:
+ - `data`: specify the data.frame (or a list of data.frames) to be used in the plot (requires the columns "CHR", "BP", "SNP", and "P")
+ - `genes.data`: specify a data.frame with gene locations to plot beneath the graph (requires the columns "Gene", "Chrom", "Start", and "End") - the `UCSC_GRCh37_Genes_UniqueList.txt` in this repo can be used for this
+ - `plot.title`: specify a title to go above your plot
+ - `file.name`: specify a filename for your plot to be saved to
 
+Optional flags are also available:
+
+ - `ld.file`: specify a data.frame with LD values relevant to the SNP specified by `snp` (requires the columns "SNP_B" and "R2") 
  - `offset_bp`: specify how far either side of the `snp`, `gene`, or `region` you want the plot to extend (defaults to 200000)
  - `non-coding`: when using the UCSC gene list you can specify whether you want to plot the non-coding genes (defaults to FALSE)
  - `nominal`: specify the nominal significance level to draw on the plot (in -log[10](_P_), default is 6 or _P_ = 1e-6)
