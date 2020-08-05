@@ -170,7 +170,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Plot Gene tracks
-  par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0))
+  par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0), xpd = FALSE)
   plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, 3))
 
   # add colour column to genes.data
@@ -221,12 +221,12 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   significant = as.numeric(plot.var[6])
   
   # Plot SNP presence:
-  par(mar = c(0, 4, 2, 8), mgp = c(2, 1, 0))
+  par(mar = c(0, 4, 2, 8), mgp = c(2, 1, 0), xpd = FALSE)
   plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, xlim = c(x.min, x.max), cex.lab = 0.8)
   title(plot.title, line = 0)
   
   # Plot Manhattan/LocusZoom of region
-  par(mar = c(0, 4, 0, 8), mgp = c(2, 1, 0))
+  par(mar = c(0, 4, 0, 8), mgp = c(2, 1, 0), xpd = FALSE)
   ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
   plot(x = data.plot$BP, y = data.plot$logP, ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
   abline(h = nominal, col = "blue", lty = "dashed")
