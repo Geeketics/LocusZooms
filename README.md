@@ -34,7 +34,7 @@ locus.zoom(data = Example.assoc.linear,                                    # a d
 
 ![](Example.jpg)
 
-Compulsory flags:
+### Compulsory flags:
 
 One of `snp`, `gene`, or `region` must be specified to create the plot:
 
@@ -49,7 +49,7 @@ As well as each of the following:
  - `plot.title`: specify a title to go above your plot
  - `file.name`: specify a filename for your plot to be saved to
 
-Optional flags are also available:
+### Optional flags:
 
  - `ld.file`: specify a data.frame with LD values relevant to the SNP specified by `snp` (requires the columns "SNP_B" and "R2") 
  - `offset_bp`: specify how far either side of the `snp`, `gene`, or `region` you want the plot to extend (defaults to 200000)
@@ -66,3 +66,21 @@ Optional flags are also available:
  - `nplots`: specify whether multiple results plots will be saved into your jpeg file (e.g. plot two GWAS results one above another; defaults to FALSE)
  - `ignore.lead`: specify whether to ignore the SNP with the smallest P and use the SNP specified by 'snp' to centre the plot (defaults to FALSE)
  - `rsid.check`: specify whether to check if the SNPs are labelled with rsIDs - should only matter if script is calculating LD for you (defaults to TRUE)
+
+## Secondary Example:
+
+_This is not reproducible from the example data._
+
+```
+locus.zoom(data = EUR_meta_full1_clean_rsid.nfiltered_chr7,
+           gene = "MLXIPL",
+           offset_bp = 500000,
+           genes.data = UCSC_GRCh37_Genes_UniqueList,
+           plot.title = "Association of MLXIPL with gout in Europeans",
+           file.name = "alternateExample.jpg",
+           genes.pvalue = European_GWAS_2020_test.genes_named,
+           colour.genes = TRUE)
+```
+
+![](alternateExample.jpg)
+
