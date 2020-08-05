@@ -19,6 +19,8 @@
 ## file.name: specifies what name to save the plot under
 ## secondary.snp: specifies a list of SNPs to label on the graph as well as labelling the top SNP / chosen SNP
 ## secondary.label: specifies whether to label the secondary SNPs on the plot
+## genes.pvalue: specifies a data.frame of p-values associated with each gene (e.g. MAGMA results) - expects the headers Gene, P
+## colour.genes: specifies whether to colour genes based on a p-value provided in gene.pvalue
 ## population: specifies the 1000 genomes population to use for LD (if script is calculating for you)
 ## sig.type: specifies whether the y-axis should be -log10(P) or -log10(BF) - these are the only two options
 ## nplots: specifies how many plots will be saved into a single jpeg (e.g. plot two GWAS results one above another, nplots = TRUE)
@@ -36,11 +38,22 @@
 # NA = #7F7F7F
 # top-hit = #7D26CD
 
+## Gene Colours
+# <1e-15 = #FF0000
+# ≥1e-15, <1e-10 = #FFA500
+# ≥1e-10, <1e-5 = #00FF00
+# ≥1e-5, <0.05 = #87CEFA
+# ≥0.05 = #000080
+# NA = #7F7F7F
+
 # Function to make LocusZoom like plots
-locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
-  # Load Data and define constants:
-  LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
+locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
   
+  # Define constants:
+  LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
+  GENE.colours <- data.frame(Threshold = c(">2.6e-6", ">1e-10", ">1e-15", ">1e-20", "<1e-20"), Colour = c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), stringsAsFactors = FALSE)
+  
+  # Load Data
   # If plotting multiple summary stats, take the first summary stats as lead/reference data:
   if (is.data.frame(data)) {
     lead.data = data
@@ -72,10 +85,15 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   genes.data = genes.data[genes.data$Start < region[3], ]
   
   # Remove Non-Coding Gene Info:
-  if(noncoding == FALSE){
+  if(!noncoding) {
     genes.data = genes.data[genes.data$Coding != "Non-Coding", ]
   }
   
+  # Pull out the relevant information from the gene p-values data
+  if(colour.genes) {
+    genes.pvalue = genes.pvalue[genes.pvalue$Gene %in% genes.data$Gene, ]
+  }
+    
   # TODO: adjust for list type
   # Likewise, pull out the relevant data from the result file(s), and logBF/log p-value:
   if (is.data.frame(data)) {
@@ -125,8 +143,13 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   
   # Define output plot size
   npanel = ifelse(nplots, length(data), 1)
-  jpeg.height = (npanel * 80) + 50
-  jpeg(width = 150, height = jpeg.height, units = "mm", res = 300, file = file.name)
+  plot.height = (npanel * 80) + 50
+  if(plot.type == "jpg"){
+    jpeg(width = 160, height = plot.height, units = "mm", res = 300, file = file.name)
+  } else{
+    svg(width = (160 / 25.4), height = (plot.height / 25.4), file = file.name)
+  }
+
   mat.row = (2 * npanel) + 1
   locus.par = c(4, 20)
   layout(matrix(c(1:mat.row), byrow = TRUE), heights = c(rep(locus.par, npanel), 10))
@@ -152,16 +175,23 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Plot Gene tracks
-  par(mar = c(4, 4, 0.5, 4), mgp = c(2, 1, 0))
+  par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0), xpd = FALSE)
   plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, 3))
 
+  # add colour column to genes.data
+  if(colour.genes) {
+    genes.data = merge.gene.colour(genes.data, genes.pvalue, GENE.colours)
+  } else {
+    genes.data$Colour = "#7F7F7F"
+  }
+  
   # Stagger the genes
   if (nrow(genes.data) != 0) {
-    y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[,"Gene"]))
+    y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[ ,"Gene"]))
     genes.data$Y = y[1:length(genes.data$Gene)]
-    genes.top <- genes.data[genes.data$Y == 2.5,]
-    genes.mid <- genes.data[genes.data$Y == 1.5,]
-    genes.bot <- genes.data[genes.data$Y == 0.5,]
+    genes.top <- genes.data[genes.data$Y == 2.5, ]
+    genes.mid <- genes.data[genes.data$Y == 1.5, ]
+    genes.bot <- genes.data[genes.data$Y == 0.5, ]
     
     # Plot the gene tracks:
     if (nrow(genes.top) > 0) {
@@ -174,7 +204,14 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
       gene.position(genes.bot)
     }
   }
-  
+
+  # add gene colour legend
+  if(colour.genes) {
+    legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080", "#7F7F7F")
+    par(xpd = TRUE)
+    legend(x = "right", legend = c(expression("<1x10"^-20), expression(paste("<1x10"^-15, "; ≥1x10"^-20)), expression(paste("<1x10"^-10, "; ≥1x10"^-15)), expression(paste("<2.6x10"^-6, "; ≥1x10"^-10)), expression("≥2.6x10"^-6), "Unknown"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = "p-value", inset = -0.22)
+  }
+
   dev.off()
 }
 
@@ -189,12 +226,12 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   significant = as.numeric(plot.var[6])
   
   # Plot SNP presence:
-  par(mar = c(0, 4, 2, 4), mgp = c(2, 1, 0))
+  par(mar = c(0, 4, 2, 8), mgp = c(2, 1, 0), xpd = FALSE)
   plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, xlim = c(x.min, x.max), cex.lab = 0.8)
   title(plot.title, line = 0)
   
   # Plot Manhattan/LocusZoom of region
-  par(mar = c(0, 4, 0, 4), mgp = c(2, 1, 0))
+  par(mar = c(0, 4, 0, 8), mgp = c(2, 1, 0), xpd = FALSE)
   ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
   plot(x = data.plot$BP, y = data.plot$logP, ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
   abline(h = nominal, col = "blue", lty = "dashed")
@@ -222,8 +259,9 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   }
   
   # Add LD legend
-  legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080")
-  legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = expression("r"^2), inset = 0.01)
+  legend.colour = c("#FF0000", "#FFA500", "#00FF00", "#87CEFA", "#000080", "#7F7F7F")
+  par(xpd = TRUE)
+  legend(x = "topright", legend = c("1.0", "0.8", "0.6", "0.4", "0.2", "Unknown"), col = legend.colour, fill = legend.colour, border = legend.colour, pt.cex = 1.2, cex = 0.8, bg = "white", box.lwd = 0, title = expression("r"^2), inset = c(-0.14, 0.01))
 }
 
 # Function to check if the input variants have rsIDs
@@ -336,11 +374,28 @@ plot.secondary.point <- function(data, snp, lead.snp, plot.var, nominal, label =
 }
 
 
+# Function to merge the gene and gene colours with the relevant region of the summary stats:
+merge.gene.colour <- function(data, pvalues, GENE.colours) {
+  # add gene pvalues to data.frame with gene positions
+  res = merge(data, pvalues, by = "Gene", all.x = TRUE)
+  # convert pvalues to categories
+  res$gene.col = cut(res$P, breaks = c(0, 1e-20, 1e-15, 1e-10, 2.6e-6, 1), labels = c("<1e-20", ">1e-20", ">1e-15", ">1e-10", ">2.6e-6"), include.lowest = TRUE, right = TRUE)
+  # add plotting colours based on pvalue categories
+  res = merge(res, GENE.colours, by.x = "gene.col", by.y = "Threshold", all.x = TRUE)
+  # make all genes without a pvalue grey
+  res$Colour[is.na(res$Colour)] = "#7F7F7F"
+  # sort by gene start position
+  res = res[order(res$Start), ]
+  
+  return(res)
+}
+
+
 # Function to plot the gene tracks and labels properly:
 gene.position <- function(data) {
   odd = 1
   for (i in 1:length(data$Gene)) {
-    lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = "#000080")
+    lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = as.character(data$Colour[i]))
     if(length(data$Gene) >= 10){
       length = abs(data$Start[i] - data$End[i])
       if(length > 5000) {

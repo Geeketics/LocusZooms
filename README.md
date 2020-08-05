@@ -34,7 +34,7 @@ locus.zoom(data = Example.assoc.linear,                                    # a d
 
 ![](Example.jpg)
 
-Compulsory flags:
+### Compulsory flags:
 
 One of `snp`, `gene`, or `region` must be specified to create the plot:
 
@@ -49,18 +49,38 @@ As well as each of the following:
  - `plot.title`: specify a title to go above your plot
  - `file.name`: specify a filename for your plot to be saved to
 
-Optional flags are also available:
+### Optional flags:
 
  - `ld.file`: specify a data.frame with LD values relevant to the SNP specified by `snp` (requires the columns "SNP_B" and "R2") 
  - `offset_bp`: specify how far either side of the `snp`, `gene`, or `region` you want the plot to extend (defaults to 200000)
- - `non-coding`: when using the UCSC gene list you can specify whether you want to plot the non-coding genes (defaults to FALSE)
+ - `noncoding`: when using the UCSC gene list you can specify whether you want to plot the non-coding genes (defaults to FALSE)
+ - `plot.type`: specify the file format of the plot (defaults to "jpg", options are "jpg" or "svg")
  - `nominal`: specify the nominal significance level to draw on the plot (in -log[10](_P_), default is 6 or _P_ = 1e-6)
  - `significant`: specify the significance level to draw on the plot (in -log[10](_P_), default is 7.3 or _P_ = 5e-8) 
  - `secondary.snp`: provide the list of secondary SNP IDs (must match IDs in results file) to be highlighted on the plot
  - `secondary.label`: specify whether to label the secondary SNPs on the plot (defaults to FALSE)
+ - `genes.pvalue`: specify a data.frame of p-values (e.g. MAGMA results) associated with each gene (requires the columns "Gene" and "P") 
+ - `colour.genes`: specify whether to colour genes based on a p-value provided in gene.pvalue (defaults to FALSE)
  - `population`: specify the 1000 genomes population to use when calculating LD if ld.file = NULL (defaults to "EUR", options are "AFR", "AMR", "EAS", "EUR", and "SAS")
  - `sig.type`: specify whether the y-axis should be labelled as -log10(P) or -log10(BF) (defaults to "P", options are "P" or "BF")
  - `nplots`: specify whether multiple results plots will be saved into your jpeg file (e.g. plot two GWAS results one above another; defaults to FALSE)
  - `ignore.lead`: specify whether to ignore the SNP with the smallest P and use the SNP specified by 'snp' to centre the plot (defaults to FALSE)
  - `rsid.check`: specify whether to check if the SNPs are labelled with rsIDs - should only matter if script is calculating LD for you (defaults to TRUE)
- 
+
+## Secondary Example:
+
+_This is not reproducible from the example data._
+
+```
+locus.zoom(data = EUR_meta_full1_clean_rsid.nfiltered_chr7,
+           gene = "MLXIPL",
+           offset_bp = 500000,
+           genes.data = UCSC_GRCh37_Genes_UniqueList,
+           plot.title = "Association of MLXIPL with gout in Europeans",
+           file.name = "alternateExample.jpg",
+           genes.pvalue = European_GWAS_2020_test.genes_named,
+           colour.genes = TRUE)
+```
+
+![](alternateExample.jpg)
+
