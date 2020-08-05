@@ -76,14 +76,19 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     genes.data = genes.data[genes.data$Coding != "Non-Coding", ]
   }
   
-  # Likewise, pull out the relevant data from the result file(s), and log p-value:
+  # TODO: adjust for list type
+  # Likewise, pull out the relevant data from the result file(s), and logBF/log p-value:
   if (is.data.frame(data)) {
     data = subset.data(data, region)
-    data$logP = as.numeric(unlist(lapply(data$P, elog10)))
+    if (sig.type == "P") {
+      data$logP = as.numeric(unlist(lapply(data$P, elog10)))
+    } else {
+      data$logP = data$logBF
+    }
     lead.data = data
   } else {
     data = lapply(data, function(x) subset.data(x, region))
-    data$logP = as.numeric(unlist(lapply(data$P, elog10)))
+    #data = lapply(data, function(x) {x$logP = ifelse(sig.type == "P", as.numeric(unlist(lapply(x$P, elog10))), x$logBF); return(x)})
     lead.data = data[[1]]
   }
   
