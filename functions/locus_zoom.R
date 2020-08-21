@@ -453,7 +453,12 @@ get.ld <- function(region, snp, population) {
   base.command = gsub(pattern = 'ZZ', replacement = region[1], base.command)
   base.command = gsub(pattern = 'Y1', replacement = region[2], base.command)
   base.command = gsub(pattern = 'Y2', replacement = region[3], base.command)
-  base.command = gsub(pattern = 'POP', replacement = population, base.command)
+  if(population == "TAMA"){
+    base.command = gsub(pattern = 'POP/POP', replacement = "TAMAset/AFR_AMR_EAS_EUR", base.command)
+    base.command = gsub(pattern = 'POP', replacement = population, base.command)
+  } else{
+    base.command = gsub(pattern = 'POP', replacement = population, base.command)
+  }
   base.command = gsub(pattern = 'SNP', replacement = ld.snp, base.command)
   
   # Make a system call to run the bcftools/plink command.
