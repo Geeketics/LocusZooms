@@ -94,8 +94,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     genes.pvalue = genes.pvalue[genes.pvalue$Gene %in% genes.data$Gene, ]
   }
     
-  # TODO: adjust for list type
-  # Likewise, pull out the relevant data from the result file(s), and logBF/log p-value:
+  # Pull out the relevant data from the result file(s), and logBF/log p-value:
   if (is.data.frame(data)) {
     data = subset.data(data, region)
     if (sig.type == "P") {
@@ -106,7 +105,6 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     lead.data = data
   } else {
     data = lapply(data, function(x) subset.data(x, region))
-    #data = lapply(data, function(x) {x$logP = ifelse(sig.type == "P", as.numeric(unlist(lapply(x$P, elog10))), x$logBF); return(x)})
     lead.data = data[[1]]
   }
   
@@ -232,7 +230,7 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   
   # Plot Manhattan/LocusZoom of region
   par(mar = c(0, 4, 0, 8), mgp = c(2, 1, 0), xpd = FALSE)
-  ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](italic(BF))))
+  ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](BF)))
   plot(x = data.plot$BP, y = data.plot$logP, ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
   abline(h = nominal, col = "blue", lty = "dashed")
   abline(h = significant, col = "red", lty = "dashed")
