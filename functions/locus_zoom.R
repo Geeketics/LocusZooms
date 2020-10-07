@@ -143,9 +143,9 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   npanel = ifelse(nplots, length(data), 1)
   plot.height = (npanel * 80) + 50
   if(plot.type == "jpg"){
-    jpeg(width = 160, height = plot.height, units = "mm", res = 300, file = file.name)
+    jpeg(width = 160, height = plot.height, units = "mm", res = 300, filename = file.name)
   } else{
-    svg(width = (160 / 25.4), height = (plot.height / 25.4), file = file.name)
+    svg(width = (160 / 25.4), height = (plot.height / 25.4), filename = file.name)
   }
 
   mat.row = (2 * npanel) + 1
