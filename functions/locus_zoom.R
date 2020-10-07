@@ -176,6 +176,8 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0), xpd = FALSE)
   plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, 3))
 
+  if (nrow(genes.data) != 0) {
+                       
   # add colour column to genes.data
   if(colour.genes) {
     genes.data = merge.gene.colour(genes.data, genes.pvalue, GENE.colours)
@@ -184,7 +186,6 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Stagger the genes
-  if (nrow(genes.data) != 0) {
     y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[ ,"Gene"]))
     genes.data$Y = y[1:length(genes.data$Gene)]
     genes.top <- genes.data[genes.data$Y == 2.5, ]
