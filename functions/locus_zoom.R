@@ -468,7 +468,8 @@ get.ld <- function(region, snp, population) {
   # Make a system call to run the bcftools/plink command.
   # I'm only assigning it to a variable to suppress any possible form of
   # messages/outputs from the command, just in case
-  messages = system(base.command, ignore.stdout = TRUE, intern = TRUE)
+  # ignores any errors when running the LD command, but will output the error to your screen
+  messages = system(base.command, ignore.stdout = TRUE, intern = TRUE, ignore.stderr = TRUE)
   
   # Import the LD data:
   ld.file = "POP_region_ZZ.Y1-Y2_SNP.ld"
@@ -478,8 +479,14 @@ get.ld <- function(region, snp, population) {
   ld.file = gsub(pattern = 'POP', replacement = population, ld.file)
   ld.file = gsub(pattern = 'SNP', replacement = ld.snp, ld.file)
   
-  # Import the ld file and return the data
-  ld = read.table(ld.file, stringsAsFactors = FALSE, header = TRUE)
+  # Check the ld file was made & import it
+  if(ld.file %in% list.files(pattern = ".ld")){
+    ld = read.table(ld.file, stringsAsFactors = FALSE, header = TRUE)
+  } else{
+    message("Top SNP / specified SNP not in 1000 Genomes biallelic SNPs")
+    ld = data.frame(CHR_A = NA, BP_A = NA, SNP_A = NA, CHR_B = NA, BP_B = NA, SNP_B = NA, R2 = NA)
+  }
+  # return the ld file data
   return(ld)
 }
 
