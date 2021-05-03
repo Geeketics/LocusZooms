@@ -441,7 +441,7 @@ get.ld <- function(region, snp, population) {
     --output-file tmp.vcf.gz \
     /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz;
 
-  plink2 \
+  plink1.9b4.9 \
     --vcf tmp.vcf.gz \
     --allow-no-sex \
     --snps-only \
