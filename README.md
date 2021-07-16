@@ -7,7 +7,7 @@ This script creates an R function to create regional Manhattan plots with points
   - Example.ld: A file of the LD between the SNP to be labelled (top-hit / SNP of interest) and the SNPs included in the PLINK results file
     - this file MUST have a column called "SNP_B" (containing a list of all the SNPs in the results file) and a column called "R2" (containing the R^2 LD value of each SNP). The SNP names MUST match the names in the SNP column of the results file.
     - this file can be created for you by the locus_zoom.R script IF you have access to the Biochem servers and have rsIDs in your results file, if you are running this script on your local machine you will also need to ensure bcftools and plink2 are installed
-  - Example.genes: A file of the genes within the region for use in the annotation step. This file must have 4 columns, "Gene", "Chrom", "Start", "End". The UCSC_GRCh37_Genes_UniqueList.txt file can be used as this file.
+  - Example.genes: A file of the genes within the region for use in the annotation step. This file must have five columns, "Gene", "Chrom", "Start", "End", and "Coding". The `{Gencode,UCSC}_GRCh37_Genes_UniqueList{2017,2021}.txt` files can be used for this file.
 
 ### Example locus.zoom run:
 
