@@ -51,6 +51,13 @@ UCSC_GRCh37_Genes$Chrom[UCSC_GRCh37_Genes$Chrom == "M"] = 26
 UCSC_GRCh37_Genes <- UCSC_GRCh37_Genes[order(UCSC_GRCh37_Genes$Start),]
 UCSC_GRCh37_Genes <- UCSC_GRCh37_Genes[order(UCSC_GRCh37_Genes$Chrom),]
 
+
+## added 16-Jul-21 to match other gene lists
+UCSC_GRCh37_Genes$Chrom <- paste0("chr", UCSC_GRCh37_Genes$Chrom)
+UCSC_GRCh37_Genes$Chrom[UCSC_GRCh37_Genes$Chrom == "chr23"] <- "chrX"
+UCSC_GRCh37_Genes$Chrom[UCSC_GRCh37_Genes$Chrom == "chr24"] <- "chrY"
+UCSC_GRCh37_Genes$Chrom[UCSC_GRCh37_Genes$Chrom == "chr26"] <- "chrM"
+
 ## save new file
 write.table(UCSC_GRCh37_Genes, file = "UCSC_GRCh37_Genes_UniqueList2017.txt", quote = FALSE, row.names = FALSE, sep = "\t", na = "")
   # original: write.table(UCSC_GRCh37_Genes, file = "~/GitHub/LocusZooms/UCSC_GRCh37_Genes_UniqueList.txt", quote = F, row.names = F, sep = "\t", na = "")
