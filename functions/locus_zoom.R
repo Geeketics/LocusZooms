@@ -11,7 +11,7 @@
 ## region: specifies the chromosome start and end you wish to plot
 ## ld.file: expects a data.frame of the LD between your lead SNP and all other SNPs (requires the columns SNP_B and R2) - if left blank the script can calculate this for you so long as you have access to the biochem servers
 ## offset_bp: specifies how far either side of your gene/snp/region of interest to plot (in base pairs)
-## genes.data: specifies a data.frame of genes within the plot region - expects the headers Gene, Chrom, Start, & End
+## genes.data: specifies a data.frame of genes within the plot region - expects the headers Gene, Chrom, Start, End, & Coding
 ## non-coding: specifies whether to annotate non-coding genes under the plot
 ## plot.title: specifies what to label the plot as
 ## nominal: specifies where to draw a nominal significance line
@@ -47,7 +47,7 @@
 # NA = #7F7F7F
 
 # Function to make LocusZoom like plots
-locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
+locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, psuedogenes = FALSE, RNAs = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
   
   # Define constants:
   LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
@@ -60,11 +60,31 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   } else {
     lead.data = data[[1]]
   }
+  
+  # Error check data header
+  if(!all(c("CHR", "BP", "SNP", "P") %in% names(lead.data))){
+    stop("Your data file does not contain a CHR, BP, SNP, or P column.\nCheck your header line.")
+  }
+
   lead.data$SNP = as.character(lead.data$SNP)
   
   # Check the SNPs are in rsID format and no duplicates:
   if (rsid.check) {
     check.rsid(lead.data$SNP)
+  }
+  
+  # Check gene data header
+  if(!all(c("Chrom", "Start", "End", "Coding") %in% names(genes.data))){
+    stop("Your genes.data file does not contain a Chrom, Start, End, or Coding column.\nCheck your header line.")
+  }
+  
+  # convert 'chr1' to '1' 
+  if(!(class(genes.data$Chrom) %in% c("integer", "numeric"))){
+    genes.data$Chrom <- gsub(genes.data$Chrom, pattern = "chr", replacement = "")
+    genes.data$Chrom[genes.data$Chrom == "X"] <- 23
+    genes.data$Chrom[genes.data$Chrom == "Y"] <- 24
+    genes.data$Chrom[genes.data$Chrom %in% c("M", "MT")] <- 26
+    genes.data$Chrom <- as.numeric(genes.data$Chrom)
   }
   
   # Get start and end regions for plotting and for pulling out data:
@@ -78,19 +98,27 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   region[2] = region[2] - offset_bp # start position
   region[3] = region[3] + offset_bp # end position
   
-  # Pull out the relevant information from the UCSC gene data.
+  ## Pull out the relevant information from the gene data.
+
   # Any gene that overlaps/intersect with the defined region is included:
   genes.data = genes.data[genes.data$Chrom == region[1], ]
   genes.data = genes.data[genes.data$End > region[2], ]
   genes.data = genes.data[genes.data$Start < region[3], ]
   
-  # Remove Non-Coding Gene Info:
-  if(!noncoding) {
-    genes.data = genes.data[genes.data$Coding != "Non-Coding", ]
+  # Remove psuedogenes & RNA Info:
+  if(!psuedogenes) {
+    genes.data = genes.data[!(genes.data$Coding %in% c("psuedogene", "Non-Coding")), ]
+  }
+  
+  if(!RNAs) {
+    genes.data = genes.data[!(genes.data$Coding %in% c("lncRNA", "ncRNA")), ]
   }
   
   # Pull out the relevant information from the gene p-values data
   if(colour.genes) {
+    if(!all(c("Gene", "P") %in% names(genes.pvalue))){
+      stop("Your genes.pvalue file does not contain a Gene or P column.\nCheck your file header.")
+    }
     genes.pvalue = genes.pvalue[genes.pvalue$Gene %in% genes.data$Gene, ]
   }
     
@@ -107,13 +135,16 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     data = lapply(data, function(x) subset.data(x, region))
     lead.data = data[[1]]
   }
-  
+
   # Get info on lead variant:
   if (ignore.lead) {
     if (is.na(snp)) {
       stop("You must provide a SNP with the ignore.lead = TRUE option")
     }
     lead.ind = which(lead.data$SNP == snp)
+    if(length(lead.ind) == 0){
+      stop(paste0("Your SNP (", snp, ") is not present in your data."))
+    }
   } else {
     lead.ind = which(lead.data$logP %in% max(lead.data$logP, na.rm = TRUE))[1]
   }
@@ -280,12 +311,22 @@ get.region <- function(snp.dat, snp, gene.dat, gene) {
   # If SNP is given:
   if (!is.na(snp)) {
     snp.ind = which(snp.dat$SNP == snp)
+    
+    if(length(snp.ind) == 0){
+      stop(paste0("Your SNP (", snp, ") is not present in your data."))
+    }
+    
     snp.chr = snp.dat$CHR[snp.ind]
     snp.pos = snp.dat$BP[snp.ind]
     region = c(snp.chr, snp.pos, snp.pos)
   } else if (!is.na(gene)) {
   # If Gene is given
     gene.ind = which(gene.dat$Gene == gene)
+    
+    if(length(gene.ind) == 0){
+      stop(paste0("Your gene (", gene, ") is not present in your data."))
+    }
+    
     gene.chr = gene.dat$Chrom[gene.ind]
     gene.start = gene.dat$Start[gene.ind]
     gene.end = gene.dat$End[gene.ind]
@@ -433,15 +474,28 @@ elog10 <- function(p) {
 get.ld <- function(region, snp, population) {
   ld.snp = snp
 
+  vcf.filename = "POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz"
+  vcf.filename = gsub(pattern = 'ZZ', replacement = region[1], vcf.filename)
+  if(population == "TAMA"){
+    vcf.filename = gsub(pattern = 'POP', replacement = "AFR_AMR_EAS_EUR", vcf.filename)
+  } else{
+    vcf.filename = gsub(pattern = 'POP', replacement = population, vcf.filename)
+  }
+  
+  # check necessary 1000 genomes file can be reached
+  if(!(vcf.filename %in% list.files(path = paste0("/Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/", population)))){
+    stop(paste0("The file ", paste0("/Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/", population, "/", vcf.filename), " cannot be found."))
+  }
+  
   # gsub the command and filename for chr, start/end positions and the population:
   base.command = "source ~/.bashrc;
   bcftools view \
     --regions ZZ:Y1-Y2 \
     --output-type z \
     --output-file tmp.vcf.gz \
-    /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz;
+    /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/1000VCF;
 
-  plink1.9b4.9 \
+  plink \
     --vcf tmp.vcf.gz \
     --allow-no-sex \
     --snps-only \
@@ -457,12 +511,8 @@ get.ld <- function(region, snp, population) {
   base.command = gsub(pattern = 'ZZ', replacement = region[1], base.command)
   base.command = gsub(pattern = 'Y1', replacement = region[2], base.command)
   base.command = gsub(pattern = 'Y2', replacement = region[3], base.command)
-  if(population == "TAMA"){
-    base.command = gsub(pattern = 'POP/POP', replacement = "TAMAset/AFR_AMR_EAS_EUR", base.command)
-    base.command = gsub(pattern = 'POP', replacement = population, base.command)
-  } else{
-    base.command = gsub(pattern = 'POP', replacement = population, base.command)
-  }
+  base.command = gsub(pattern = "1000VCF", replacement = vcf.filename, base.command)
+  base.command = gsub(pattern = 'POP', replacement = population, base.command)
   base.command = gsub(pattern = 'SNP', replacement = ld.snp, base.command)
   
   # Make a system call to run the bcftools/plink command.

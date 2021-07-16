@@ -7,7 +7,7 @@ This script creates an R function to create regional Manhattan plots with points
   - Example.ld: A file of the LD between the SNP to be labelled (top-hit / SNP of interest) and the SNPs included in the PLINK results file
     - this file MUST have a column called "SNP_B" (containing a list of all the SNPs in the results file) and a column called "R2" (containing the R^2 LD value of each SNP). The SNP names MUST match the names in the SNP column of the results file.
     - this file can be created for you by the locus_zoom.R script IF you have access to the Biochem servers and have rsIDs in your results file, if you are running this script on your local machine you will also need to ensure bcftools and plink2 are installed
-  - Example.genes: A file of the genes within the region for use in the annotation step. This file must have 4 columns, "Gene", "Chrom", "Start", "End". The UCSC_GRCh37_Genes_UniqueList.txt file can be used as this file.
+  - Example.genes: A file of the genes within the region for use in the annotation step. This file must have five columns, "Gene", "Chrom", "Start", "End", and "Coding". The `{Gencode,UCSC}_GRCh37_Genes_UniqueList{2017,2021}.txt` files can be used for this file.
 
 ### Example locus.zoom run:
 
@@ -15,7 +15,7 @@ This script creates an R function to create regional Manhattan plots with points
 # load necessary files into R
 Example.assoc.linear <- read.delim("Example.assoc.linear", stringsAsFactors = FALSE, header = TRUE)
 Example.ld <- read.table("Example.ld", stringsAsFactors = FALSE, header = TRUE)
-UCSC_GRCh37_Genes_UniqueList.txt <- read.delim("UCSC_GRCh37_Genes_UniqueList.txt", stringsAsFactors = FALSE, header = TRUE)
+Unique.genes <- read.delim("Gencode_GRCh37_Genes_UniqueList2021.txt", stringsAsFactors = FALSE, header = TRUE)
 
 # load the locuszoom function into R
 source("functions/locus_zoom.R")
@@ -25,7 +25,7 @@ locus.zoom(data = Example.assoc.linear,                                    # a d
            region = c(16, 53340000, 54550000),                             # the chromosome region to be included in the plot
            offset_bp = 0,                                                  # how many basepairs around the SNP / gene / region of interest to plot
            ld.file = Example.ld,                                           # a file with LD values relevant to the SNP specified above
-           genes.data = UCSC_GRCh37_Genes_UniqueList.txt,                  # a file of all the genes in the region / genome
+           genes.data = Unique.genes,			                   # a file of all the genes in the region / genome
            plot.title = "Association of FTO with BMI in Europeans",        # the plot title
            file.name = "Example.jpg",                                      # the name of the file to save the plot to
            secondary.snp = c("rs1121980", "rs8060235"),                    # a list of SNPs to label on the plot
@@ -45,7 +45,7 @@ One of `snp`, `gene`, or `region` must be specified to create the plot:
 As well as each of the following:
 
  - `data`: specify the data.frame (or a list of data.frames) to be used in the plot (requires the columns "CHR", "BP", "SNP", and either "P" or "logBF")
- - `genes.data`: specify a data.frame with gene locations to plot beneath the graph (requires the columns "Gene", "Chrom", "Start", and "End") - the `UCSC_GRCh37_Genes_UniqueList.txt` in this repo can be used for this
+ - `genes.data`: specify a data.frame with gene locations to plot beneath the graph (requires the columns "Gene", "Chrom", "Start", "End", and "Coding") - the Gencode or UCSC `{Gencode,UCSC}_GRCh37_Genes_UniqueList{2017,2021}.txt` files in this repo can be used for this
  - `plot.title`: specify a title to go above your plot
  - `file.name`: specify a filename for your plot to be saved to
 
@@ -53,7 +53,8 @@ As well as each of the following:
 
  - `ld.file`: specify a data.frame with LD values relevant to the SNP specified by `snp` (requires the columns "SNP_B" and "R2") 
  - `offset_bp`: specify how far either side of the `snp`, `gene`, or `region` you want the plot to extend (defaults to 200000)
- - `noncoding`: when using the UCSC gene list you can specify whether you want to plot the non-coding genes (defaults to FALSE)
+ - `psuedogenes`: when using one of the three gene lists in this repo you can specify whether you want to plot the pseudogenes (defaults to FALSE)
+ - `RNAs`: when using one of the two gene lists created in 2021 in this repo you can specify whether you want to plot lncRNA and ncRNA genes (defaults to FALSE)
  - `plot.type`: specify the file format of the plot (defaults to "jpg", options are "jpg" or "svg")
  - `nominal`: specify the nominal significance level to draw on the plot (in -log10(_P_), default is 6 or _P_ = 1e-6)
  - `significant`: specify the significance level to draw on the plot (in -log10(_P_), default is 7.3 or _P_ = 5e-8) 
@@ -75,7 +76,7 @@ _This is not reproducible from the example data._
 locus.zoom(data = EUR_meta_full1_clean_rsid.nfiltered_chr7,
            gene = "MLXIPL",
            offset_bp = 500000,
-           genes.data = UCSC_GRCh37_Genes_UniqueList,
+           genes.data = UCSC_GRCh37_Genes_UniqueList2017,
            plot.title = "Association of MLXIPL with gout in Europeans",
            file.name = "alternateExample.jpg",
            genes.pvalue = European_GWAS_2020_test.genes_named,
