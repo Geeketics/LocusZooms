@@ -1,3 +1,10 @@
 #ignore this hidden file
 .DS_Store
 .Rhistory
+
+making_genelists/UCSC_GRCh37_Genes.txt
+making_genelists/compare_genelists.txt
+making_genelists/compare_genelists_cache
+making_genelists/gencode.v38lift37.annotation.gtf
+making_genelists/gencode.v38lift37.annotation.wide.gtf
+making_genelists/ucsc_ensembl_export_50721.txt
