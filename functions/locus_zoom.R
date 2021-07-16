@@ -11,7 +11,7 @@
 ## region: specifies the chromosome start and end you wish to plot
 ## ld.file: expects a data.frame of the LD between your lead SNP and all other SNPs (requires the columns SNP_B and R2) - if left blank the script can calculate this for you so long as you have access to the biochem servers
 ## offset_bp: specifies how far either side of your gene/snp/region of interest to plot (in base pairs)
-## genes.data: specifies a data.frame of genes within the plot region - expects the headers Gene, Chrom, Start, & End
+## genes.data: specifies a data.frame of genes within the plot region - expects the headers Gene, Chrom, Start, End, & Coding
 ## non-coding: specifies whether to annotate non-coding genes under the plot
 ## plot.title: specifies what to label the plot as
 ## nominal: specifies where to draw a nominal significance line
@@ -47,7 +47,7 @@
 # NA = #7F7F7F
 
 # Function to make LocusZoom like plots
-locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, noncoding = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
+locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, psuedogenes = FALSE, RNAs = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
   
   # Define constants:
   LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
@@ -78,15 +78,19 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   region[2] = region[2] - offset_bp # start position
   region[3] = region[3] + offset_bp # end position
   
-  # Pull out the relevant information from the UCSC gene data.
+  # Pull out the relevant information from the gene data.
   # Any gene that overlaps/intersect with the defined region is included:
   genes.data = genes.data[genes.data$Chrom == region[1], ]
   genes.data = genes.data[genes.data$End > region[2], ]
   genes.data = genes.data[genes.data$Start < region[3], ]
   
-  # Remove Non-Coding Gene Info:
-  if(!noncoding) {
-    genes.data = genes.data[genes.data$Coding != "Non-Coding", ]
+  # Remove psuedogenes & RNA Info:
+  if(!psuedogene) {
+    genes.data = genes.data[!(genes.data$Coding %in% c("psuedogene", "Non-Coding")), ]
+  }
+  
+  if(!RNAs) {
+    genes.data = genes.data[!(genes.data$Coding %in% c("lncRNA", "ncRNA")), ]
   }
   
   # Pull out the relevant information from the gene p-values data

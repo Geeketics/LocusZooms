@@ -1,0 +1,269 @@
+---
+title: "Gene List Comparison"
+author: "Tanya Major"
+date: "First Run: 8th Jul 2021; Updated: `r format(Sys.Date(), '%dth %b %Y')`"
+output:
+  rmarkdown::html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: false
+    code_folding: "hide"
+---
+
+
+```{r markdown_setup, echo = FALSE, message = FALSE}
+# Set options you want to apply to all chunks here
+knitr::opts_chunk$set(cache = TRUE, tidy = TRUE, echo = TRUE, comment = "", tidy.opts = list(width.cutoff = 100), message = FALSE)
+options(width = 400)
+options(knitr.table.format = "html")
+```
+
+**_Working Directory: `r getwd()`_**
+
+<style>
+body {
+text-align: justify
+}
+</style>
+
+```{r load_libraries}
+# generic load
+library(tidyverse)
+
+# for markdown formatting
+library(formatR)
+library(kableExtra)
+```
+
+
+The question was asked "does the gene list we've been using for LocusZooms/MAGMA/etc. in the GWAS need updating?" - some gene names have been fixed/updated since the build 38 release.
+
+This document details a comparison between the file we have been using and two alternate files, one sourced from gencode and the other sourced from UCSC.
+
+
+The gencode and UCSC files had to be converted to the same formatting & one unique row per ensembl gene ID as the original UCSC gene list was. Code and relevant data files here: `LocusZooms/making_genelists/`
+
+
+  + UCSC_GRCh37_Genes.txt (downloaded in 2017 from UCSC)
+  + UCSC_makingGeneList2017.R (conversion code from 2017)
+  + gencode.v38lift37.annotation.gtf (downloaded from gencode ftp 2021)
+  + gencode.v38lift37.annotation.wide.gtf (wide format of gencode download - split annotations)
+  + gencode_GeneList2021.R (conversion code, 2021)
+  + ucsc_ensembl_export_50721.txt (downloaded from UCSC in 2021)
+  + ucsc_GeneList2021.R (conversion code, 2021)
+                 
+
+#### Step 1: Quick Looks {.tabset}
+
+##### UCSC (2017)
+
+```{r load_ucsc2017}
+ucsc.unique2017 <- read.delim("../UCSC_GRCh37_Genes_UniqueList2017.txt")
+```
+
+```{r quick_look_ucsc2017}
+dim(ucsc.unique2017)
+
+kable(head(ucsc.unique2017) %>% mutate(Strand = paste0('\"', Strand, '\"')), escape = FALSE, booktabs = TRUE) %>%
+  kable_styling()
+```
+
+##### UCSC (2021)
+
+```{r load_ucsc2021}
+ucsc.unique2021 <- read.delim("../UCSC_GRCh37_Genes_UniqueList2021.txt")
+```
+
+```{r quick_look_ucsc2021}
+dim(ucsc.unique2021)
+
+kable(head(ucsc.unique2021) %>% mutate(Strand = paste0('\"', Strand, '\"')), escape = FALSE, booktabs = TRUE) %>%
+  kable_styling()
+```
+
+##### Gencode (2021)
+
+```{r load_gencode2021}
+gencode.unique2021 <- read.delim("../Gencode_GRCh37_Genes_UniqueList2021.txt")
+```
+
+```{r quick_look_gencode2021}
+dim(gencode.unique2021)
+
+kable(head(gencode.unique2021) %>% mutate(Strand = paste0('\"', Strand, '\"')), escape = FALSE, booktabs = TRUE) %>%
+  kable_styling()
+```
+
+#### {-}
+
+There are `r length(ucsc.unique2021[, 1]) - length(ucsc.unique2017[, 1])` more rows in the 2021 gene list from UCSC than the 2017 gene list from UCSC (Murray suggested this could be due to a change in policy around inclusion/exclusion of psuedogene categories in the past 3 years). There are `r length(gencode.unique2021[, 1]) - length(ucsc.unique2021[, 1])` more rows in the gene list from gencode than the 2021 gene list from UCSC.
+
+In addition;
+
+
+  + the UCSC file from 2017 does not have "chr" at the start of each chromosome value
+  + the UCSC file from 2017 only has one transcript & protein ID listed (matches longest transcript in CDS info?)
+  + the UCSC file from 2017 does not have as much detail about a genes coding status (e.g. only non-coding, not specified as lncRNA)
+  + the ensembl geneIDs in the gencode file have extra numbers annotating the end of the geneID - these are to do with scaffold versions etc.
+  + any gene that is not labelled as "proteincoding" in the gencode file does not have a CDS start/end/length
+
+
+These differences will cause issues when comparing the three gene lists, and so are being noted now.
+
+
+#### Step 2: Merge Gene Lists
+
+To directly compare the gene names and locations in the three files creating a single file with all information present is easiest.
+
+
+```{r merge_genes}
+# convert gencode ensemblIDs to 'simple' version
+gencode.unique2021$simpleGeneID <- do.call(rbind, strsplit(as.character(gencode.unique2021$ensemblGeneID), split = "\\."))[, 1]
+
+# merge ensemblIDs
+comparison <- merge(ucsc.unique2017, gencode.unique2021, by.x = "ensemblGeneID", by.y = "simpleGeneID", all = TRUE, suffixes = c(".ucsc2017", ".gencode"))
+comparison <- merge(comparison, ucsc.unique2021, by = "ensemblGeneID", all = TRUE, suffixes = c("", ".ucsc2021"))
+names(comparison)[27:38] <- paste0(names(comparison)[27:38], ".ucsc2021")
+
+
+# fix ucsc2017 chromosome column
+comparison$Chrom.ucsc2017 <- paste0("chr", comparison$Chrom.ucsc2017)
+comparison$Chrom.ucsc2017[comparison$Chrom.ucsc2017 == "chr23"] <- "chrX"
+comparison$Chrom.ucsc2017[comparison$Chrom.ucsc2017 == "chr24"] <- "chrY"
+comparison$Chrom.ucsc2017[comparison$Chrom.ucsc2017 == "chr26"] <- "chrM"
+comparison$Chrom.ucsc2017[comparison$Chrom.ucsc2017 == "chrNA"] <- NA
+```
+
+
+After merging the three files together there are `r length(comparison[, 1])` unique ensemblIDs within the three files. To compare these IDs across the files 'categorising' them based on identical/non-identical information will be most informative.
+
+```{r compare_columns}
+comparison[comparison == ""] <- NA
+comparison$Category <- NA
+
+# label genes in only one dataset
+comparison$Category[!is.na(comparison$Chrom.gencode) & is.na(comparison$Chrom.ucsc2017) & is.na(comparison$Chrom.ucsc2021)] <- "gencode-only"
+comparison$Category[is.na(comparison$Chrom.gencode) & !is.na(comparison$Chrom.ucsc2017) & is.na(comparison$Chrom.ucsc2021)] <- "ucsc2017-only"
+comparison$Category[is.na(comparison$Chrom.gencode) & is.na(comparison$Chrom.ucsc2017) & !is.na(comparison$Chrom.ucsc2021)] <- "ucsc2021-only"
+
+# create comparison columns
+for(column in names(ucsc.unique2017)[-7]) {
+  if(column %in% c("Start", "End", "cdsStart", "cdsEnd", "GeneLength", "cdsLength")){
+    # are positions within 100bp of each other
+    comparison[, paste0(column, ".ucsc2017.gencode")] <- abs(comparison[, paste0(column, ".ucsc2017")] - comparison[, paste0(column, ".gencode")]) <= 100
+    comparison[, paste0(column, ".ucsc2017.ucsc2021")] <- abs(comparison[, paste0(column, ".ucsc2017")] - comparison[, paste0(column, ".ucsc2021")]) <= 100
+    comparison[, paste0(column, ".gencode.ucsc2021")] <- abs(comparison[, paste0(column, ".gencode")] - comparison[, paste0(column, ".ucsc2021")]) <= 100
+  } else {
+    comparison[, paste0(column, ".ucsc2017.gencode")] <- comparison[, paste0(column, ".ucsc2017")] == comparison[, paste0(column, ".gencode")]
+    comparison[, paste0(column, ".ucsc2017.ucsc2021")] <- comparison[, paste0(column, ".ucsc2017")] == comparison[, paste0(column, ".ucsc2021")]
+    comparison[, paste0(column, ".gencode.ucsc2021")] <- comparison[, paste0(column, ".gencode")] == comparison[, paste0(column, ".ucsc2021")]
+  }
+}
+rm(column)
+```
+
+
+There are `r length(comparison[!comparison$Chrom.ucsc2017.gencode, 1])` and `r length(comparison[!comparison$Chrom.gencode.ucsc2021, 1])` differences between chromosome designations of genes. These are all due to duplication of information in the gencode file for genes encoded in the psuedo-autosomal region(one version of gene for chrX and another for chrY, only chrX version in either UCSC-sourced file).
+
+In addition, there are `r length(comparison[!comparison$Strand.gencode.ucsc2021, 1])` differences in strand designation of genes.
+
+Important differences will be between gene names and start/end positions
+
+
+```{r categorise_genes}
+# categorise based on identical/non-identical info [start, end, gene] (strand identical across all datasets, chrom non-identical mean same thing)
+# identical position & gene name
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.ucsc2017.gencode & 
+                      comparison$Start.ucsc2017.ucsc2021 & 
+                      comparison$Start.gencode.ucsc2021 & 
+                      comparison$End.ucsc2017.gencode & 
+                      comparison$End.ucsc2017.ucsc2021 & 
+                      comparison$End.gencode.ucsc2021 & 
+                      comparison$Gene.ucsc2017.gencode & 
+                      comparison$Gene.ucsc2017.ucsc2021 & 
+                      comparison$Gene.gencode.ucsc2021] <- "identical-all3"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.ucsc2017.gencode & 
+                      comparison$End.ucsc2017.gencode & 
+                      comparison$Gene.ucsc2017.gencode] <- "identical-gen.2017"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.ucsc2017.ucsc2021 & 
+                      comparison$End.ucsc2017.ucsc2021 & 
+                      comparison$Gene.ucsc2017.ucsc2021] <- "identical-ucsc"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.gencode.ucsc2021 & 
+                      comparison$End.gencode.ucsc2021 & 
+                      comparison$Gene.gencode.ucsc2021] <- "identical-2021"
+
+# identical gene-names only
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Gene.ucsc2017.gencode & 
+                      comparison$Gene.ucsc2017.ucsc2021 & 
+                      comparison$Gene.gencode.ucsc2021] <- "identical.gene-all3"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Gene.ucsc2017.ucsc2021] <- "identical.gene-ucsc"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Gene.gencode.ucsc2021] <- "identical.gene-2021"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Gene.ucsc2017.gencode] <- "identical.gene-gen.2017"
+
+# identical positions only
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.ucsc2017.gencode & 
+                      comparison$Start.ucsc2017.ucsc2021 & 
+                      comparison$Start.gencode.ucsc2021 & 
+                      comparison$End.ucsc2017.gencode & 
+                      comparison$End.ucsc2017.ucsc2021 & 
+                      comparison$End.gencode.ucsc2021] <- "identical.pos-all3"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.ucsc2017.gencode & 
+                      comparison$End.ucsc2017.gencode] <- "identical.pos-gen.2017"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.ucsc2017.ucsc2021 & 
+                      comparison$End.ucsc2017.ucsc2021] <- "identical.pos-ucsc"
+
+comparison$Category[is.na(comparison$Category) &
+                      comparison$Start.gencode.ucsc2021 & 
+                      comparison$End.gencode.ucsc2021] <- "identical.pos-2021"
+```
+
+
+
+
+
+
+```{r, eval = FALSE}
+
+
+#### compare UCSC and gencode lists ####
+
+
+
+
+# better - rbind & remove complete duplicates
+ucsc.unique$simpleGeneID <- ucsc.unique$ensemblGeneID
+big_ucsc.unique$simpleGeneID <- big_ucsc.unique$ensemblGeneID
+
+gencode.wide.unique$SourceFile <- "gencode"
+ucsc.unique$SourceFile <- "ucsc_original"
+big_ucsc.unique$SourceFile <- "ucsc_big"
+
+ucsc.unique$Chrom <- paste0("chr", ucsc.unique$Chrom)
+
+comparison_long <- rbind(gencode.wide.unique, big_ucsc.unique, ucsc.unique)
+
+# remove duplicates bashed on chr, start, end, strand, geneID & gene name, length
+comparison_long <- comparison_long[!duplicated(comparison_long[, c("Chrom", "Start", "End", "Strand", "simpleGeneID", "Gene", "GeneLength")]), ]
+
+
+
+```
