@@ -474,6 +474,10 @@ elog10 <- function(p) {
 get.ld <- function(region, snp, population) {
   ld.snp = snp
 
+  if (region[1] == "23") {
+    region[1] = "X"
+  }
+  
   vcf.filename = "POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz"
   vcf.filename = gsub(pattern = 'ZZ', replacement = region[1], vcf.filename)
   if(population == "TAMA"){
