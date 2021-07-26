@@ -5,7 +5,7 @@
 # Uni of Otago
 
 ### Important Running Notes:
-## data: expects a data.frame (or a list of data.frames) with at least columns containing the chromosome, positions, rsIDs, and p-values of your results - these must be labelled CHR, BP, SNP, and P
+## data: expects a data.frame (or a list of data.frames) with at least columns containing the chromosome, positions, rsIDs, and p-values of your results - these must be labelled CHR, BP, SNP, and P (or logBF)
 ## snp: specifies a SNP to centre the plot around
 ## gene: specifies a gene to centre the plot around
 ## region: specifies the chromosome start and end you wish to plot
@@ -62,8 +62,14 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Error check data header
-  if(!all(c("CHR", "BP", "SNP", "P") %in% names(lead.data))){
-    stop("Your data file does not contain a CHR, BP, SNP, or P column.\nCheck your header line.")
+  if(sig.type == "P") {
+    if(!all(c("CHR", "BP", "SNP", "P") %in% names(lead.data))){
+      stop("Your data file does not contain a CHR, BP, SNP, or P column.\nCheck your header line.")
+    }
+  } else {
+    if(!all(c("CHR", "BP", "SNP", "logBF") %in% names(lead.data))){
+      stop("Your data file does not contain a CHR, BP, SNP, or logBF column.\nCheck your header line.")
+     }
   }
 
   lead.data$SNP = as.character(lead.data$SNP)
