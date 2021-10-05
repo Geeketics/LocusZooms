@@ -211,7 +211,12 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   
   # Plot Gene tracks
   par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0), xpd = FALSE)
-  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, 3))
+  if(length(genes.data[, "Gene"]) > 15){
+    track.max = 6
+  } else{
+    track.max = 3
+  }
+  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, track.max))
 
   if (nrow(genes.data) != 0) {
                        
@@ -223,21 +228,19 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Stagger the genes
-    y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[ ,"Gene"]))
-    genes.data$Y = y[1:length(genes.data$Gene)]
-    genes.top <- genes.data[genes.data$Y == 2.5, ]
-    genes.mid <- genes.data[genes.data$Y == 1.5, ]
-    genes.bot <- genes.data[genes.data$Y == 0.5, ]
-    
+    if(length(genes.data[, "Gene"]) > 15){
+      y = rep(c(5, 2, 3, 4, 1), times = length(genes.data[ ,"Gene"]))
+      genes.data$Y = y[1:length(genes.data$Gene)]
+    } else{
+      y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[ ,"Gene"]))
+      genes.data$Y = y[1:length(genes.data$Gene)]
+    }
     # Plot the gene tracks:
-    if (nrow(genes.top) > 0) {
-      gene.position(genes.top)
-    }
-    if (nrow(genes.mid) > 0) {
-      gene.position(genes.mid)
-    }
-    if (nrow(genes.bot) > 0) {
-      gene.position(genes.bot)
+    for(track in unique(genes.data$Y)){
+      genes.set <- genes.data[genes.data$Y == track, ]
+      if (nrow(genes.set) > 0) {
+        gene.position(genes.set)
+      }
     }
   }
 
@@ -446,16 +449,16 @@ gene.position <- function(data) {
       length = abs(data$Start[i] - data$End[i])
       if(length > 5000) {
         if (odd%%2 == 0) {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], font = 3, cex = 0.7, pos = 3)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 3, offset = 0.25)
         } else {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.7, pos = 1)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 1, offset = 0.3)
         }
       }
     } else {
       if (odd%%2 == 0) {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], font = 3, cex = 0.7, pos = 3)
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 3, offset = 0.25)
       } else {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.7, pos = 1)
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 1, offset = 0.3)
       }
     }
     odd = odd + 1
