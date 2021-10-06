@@ -5,7 +5,7 @@
 # Uni of Otago
 
 ### Important Running Notes:
-## data: expects a data.frame (or a list of data.frames) with at least columns containing the chromosome, positions, rsIDs, and p-values of your results - these must be labelled CHR, BP, SNP, and P
+## data: expects a data.frame (or a list of data.frames) with at least columns containing the chromosome, positions, rsIDs, and p-values of your results - these must be labelled CHR, BP, SNP, and P (or logBF)
 ## snp: specifies a SNP to centre the plot around
 ## gene: specifies a gene to centre the plot around
 ## region: specifies the chromosome start and end you wish to plot
@@ -62,8 +62,14 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Error check data header
-  if(!all(c("CHR", "BP", "SNP", "P") %in% names(lead.data))){
-    stop("Your data file does not contain a CHR, BP, SNP, or P column.\nCheck your header line.")
+  if(sig.type == "P") {
+    if(!all(c("CHR", "BP", "SNP", "P") %in% names(lead.data))){
+      stop("Your data file does not contain a CHR, BP, SNP, or P column.\nCheck your header line.")
+    }
+  } else {
+    if(!all(c("CHR", "BP", "SNP", "logBF") %in% names(lead.data))){
+      stop("Your data file does not contain a CHR, BP, SNP, or logBF column.\nCheck your header line.")
+     }
   }
 
   lead.data$SNP = as.character(lead.data$SNP)
@@ -168,7 +174,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     data.plot = lapply(data, function(x) merge.plot.dat(x, new.ld.file, LD.colours))
   }
   
-  # Make Plot
+### Make Plot ###
   
   # Define output plot size
   npanel = ifelse(nplots, length(data), 1)
@@ -205,7 +211,12 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   
   # Plot Gene tracks
   par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0), xpd = FALSE)
-  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, 3))
+  if(length(genes.data[, "Gene"]) > 15){
+    track.max = 6
+  } else{
+    track.max = 3
+  }
+  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, track.max))
 
   if (nrow(genes.data) != 0) {
                        
@@ -217,21 +228,19 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # Stagger the genes
-    y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[ ,"Gene"]))
-    genes.data$Y = y[1:length(genes.data$Gene)]
-    genes.top <- genes.data[genes.data$Y == 2.5, ]
-    genes.mid <- genes.data[genes.data$Y == 1.5, ]
-    genes.bot <- genes.data[genes.data$Y == 0.5, ]
-    
+    if(length(genes.data[, "Gene"]) > 15){
+      y = rep(c(5, 2, 3, 4, 1), times = length(genes.data[ ,"Gene"]))
+      genes.data$Y = y[1:length(genes.data$Gene)]
+    } else{
+      y = rep(c(2.5, 1.5, 0.5), times = length(genes.data[ ,"Gene"]))
+      genes.data$Y = y[1:length(genes.data$Gene)]
+    }
     # Plot the gene tracks:
-    if (nrow(genes.top) > 0) {
-      gene.position(genes.top)
-    }
-    if (nrow(genes.mid) > 0) {
-      gene.position(genes.mid)
-    }
-    if (nrow(genes.bot) > 0) {
-      gene.position(genes.bot)
+    for(track in unique(genes.data$Y)){
+      genes.set <- genes.data[genes.data$Y == track, ]
+      if (nrow(genes.set) > 0) {
+        gene.position(genes.set)
+      }
     }
   }
 
@@ -267,24 +276,21 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   abline(h = nominal, col = "blue", lty = "dashed")
   abline(h = significant, col = "red", lty = "dashed")
   
-  # Plot the lead SNP and remove it from the list of secondary SNPs, if present:
+  # Plot the lead SNP
   if (lead.snp %in% data.plot$SNP) {
     ind = which(data.plot$SNP == lead.snp)
     lead.pos = data.plot$BP[ind]
     lead.logp = data.plot$logP[ind]
     points(x = lead.pos, y = lead.logp, pch = 18, cex = 1.5, col = "#7D26CD")
     text(x = lead.pos, y = lead.logp, labels = lead.snp, pos = 3)
-    secondary.snp = secondary.snp[which(secondary.snp != lead.snp)]
   }
   
-  # Plot label/text for the secondary SNP
+  # Plot label/text for the secondary SNP (removes lead.snp from the list of secondary SNPs before plotting)
   if(any(!is.na(secondary.snp))){
-    check = which(data.plot$SNP %in% secondary.snp)
+    check = which(data.plot$SNP %in% c(secondary.snp, lead.snp))
     if (length(check) != 0) {
       secondary.data = data.plot[check, ]
-      for (i in 1:nrow(secondary.data)) {
-        plot.secondary.point(data = secondary.data, snp = secondary.data$SNP[i], lead.snp = lead.snp, plot.var = plot.var, nominal = nominal, label = secondary.label)
-      }
+      plot.secondary.point(data = secondary.data, snps = secondary.data$SNP, lead.snp = lead.snp, plot.data = data.plot, plot.var = plot.var, label = secondary.label)
     }
   }
   
@@ -371,48 +377,62 @@ merge.plot.dat <- function(data, ld.file, LD.colours) {
   return(res)
 }
 
-# Function to plot secondary SNP:
-plot.secondary.point <- function(data, snp, lead.snp, plot.var, nominal, label = FALSE) {
-  # save out variables
-  ind = which(data$SNP == snp)
-  snp = data$SNP[ind]
-  pos = data$BP[ind]
-  logp = data$logP[ind]
+# Function to plot secondary SNPs:
+plot.secondary.point <- function(data, snps, lead.snp, plot.data, plot.var, label = FALSE) {
+  
   lead.ind = which(data$SNP == lead.snp)
-  lead.pos = data$BP[ind]
-
+  lead.pos = data$BP[lead.ind]
+  
+  data = data[which(data$SNP != lead.snp), ]
+  
   # plot red line around secondary SNP
-  points(x = pos, y = logp, pch = 1, cex = 1.1, col = "#FF0000")
-
+  points(x = data$BP, y = data$logP, pch = 1, cex = 1.1, col = "#FF0000")
+  
+  # add SNP labels if requested
   if (label) {
-  # set up labelling offsets (x-axis)
+    # set up labeling offsets (x-axis)
     x.min = as.numeric(plot.var[2])
     x.max = as.numeric(plot.var[3])
     x.offset = abs(x.max - x.min) / 150 * 15
     
-    if(pos < lead.pos) {
-      label.x.offset = pos - x.offset
-      line.x.offset = pos - (x.offset / 3)
-      side = 1
-    } else {
-      label.x.offset = pos + x.offset
-      line.x.offset = pos + (x.offset / 3)
-      side = 0
+    data$label.x.offset[data$BP < lead.pos] = data$BP[data$BP < lead.pos] - x.offset / 3
+    data$side[data$BP < lead.pos] = 2
+    
+    data$label.x.offset[data$BP >= lead.pos] = data$BP[data$BP >= lead.pos] + x.offset / 3
+    data$side[data$BP >= lead.pos] = 4
+    
+    data$label.y.offset = NA
+    for(snp in data$SNP){
+      ind = which(data$SNP == snp)
+      pos = data$BP[ind]
+      
+      # set up labeling offsets (y-axis) - considers SNPs around it  
+      surrounding.data = plot.data[plot.data$BP > (pos - (abs(x.max - x.min) / 6)) & plot.data$BP < (pos + (abs(x.max - x.min) / 6)), ]
+      data$label.y.offset[ind] = max(surrounding.data$logP) * 1.03
+      rm(surrounding.data, ind, pos)
     }
     
-    # set up labelling offsets (y-axis) - considers SNPs around it  
-    surrounding.data = data[data$BP > (pos - (abs(x.max - x.min) / 6)) & data$BP < (pos + (abs(x.max - x.min) / 6)), ]
-    label.y.offset = max(surrounding.data$logP) * 1.03
-    if(abs(nominal - label.y.offset) <= 1) {
-      label.y.offset <- max(label.y.offset, nominal) * 1.03
+    for(offset.pos in unique(data$label.y.offset)){
+      if(length(data[data$label.y.offset == offset.pos, 1]) > 1){
+        data$label.y.offset[data$label.y.offset == offset.pos] = jitter(data$label.y.offset[data$label.y.offset == offset.pos], amount = 1)
+      }
     }
-    
-    # add lines and text to label SNP
-    text(x = label.x.offset, y = (label.y.offset * 1.01), labels = snp, cex = 0.7, adj = c(1, side))
-    segments(x0 = pos, x1 = line.x.offset, y0 = logp, y1 = label.y.offset)
+
+    for(snp in data$SNP){
+      ind = which(data$SNP == snp)
+      pos = data$BP[ind]
+      
+      logp = data$logP[ind]
+      label.x = data$label.x.offset[ind]
+      label.y = data$label.y.offset[ind]
+      side = data$side[ind]
+
+      # add lines and text to label SNP
+      text(x = label.x, y = (label.y * 1.01), labels = snp, cex = 0.7, pos = side, offset = 0.2)
+      segments(x0 = pos, x1 = label.x, y0 = logp, y1 = label.y * 1.01)
+    }
   }
 }
-
 
 # Function to merge the gene and gene colours with the relevant region of the summary stats:
 merge.gene.colour <- function(data, pvalues, GENE.colours) {
@@ -440,16 +460,16 @@ gene.position <- function(data) {
       length = abs(data$Start[i] - data$End[i])
       if(length > 5000) {
         if (odd%%2 == 0) {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], font = 3, cex = 0.7, pos = 3)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 3, offset = 0.25)
         } else {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.7, pos = 1)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 1, offset = 0.3)
         }
       }
     } else {
       if (odd%%2 == 0) {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i] - 0.1, labels = data$Gene[i], font = 3, cex = 0.7, pos = 3)
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 3, offset = 0.25)
       } else {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.7, pos = 1)
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 1, offset = 0.3)
       }
     }
     odd = odd + 1
@@ -474,6 +494,10 @@ elog10 <- function(p) {
 get.ld <- function(region, snp, population) {
   ld.snp = snp
 
+  if (region[1] == "23") {
+    region[1] = "X"
+  }
+  
   vcf.filename = "POP_chrZZ.no_relatives.no_indel.biallelic.vcf.gz"
   vcf.filename = gsub(pattern = 'ZZ', replacement = region[1], vcf.filename)
   if(population == "TAMA"){
