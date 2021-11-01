@@ -47,7 +47,7 @@
 # NA = #7F7F7F
 
 # Function to make LocusZoom like plots
-locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, psuedogenes = FALSE, RNAs = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE) {
+locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = NULL, offset_bp = 200000, genes.data = NULL, psuedogenes = FALSE, RNAs = FALSE, plot.title = NULL, plot.type = "jpg", nominal = 6, significant = 7.3, file.name = NULL, secondary.snp = NA, secondary.label = FALSE, genes.pvalue = NULL, colour.genes = FALSE, population = "EUR", sig.type = "P", nplots = FALSE, ignore.lead = FALSE, rsid.check = TRUE, nonhuman = FALSE) {
   
   # Define constants:
   LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
@@ -85,14 +85,16 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   }
   
   # convert 'chr1' to '1' 
-  if(!(class(genes.data$Chrom) %in% c("integer", "numeric"))){
-    genes.data$Chrom <- gsub(genes.data$Chrom, pattern = "chr", replacement = "")
-    genes.data$Chrom[genes.data$Chrom == "X"] <- 23
-    genes.data$Chrom[genes.data$Chrom == "Y"] <- 24
-    genes.data$Chrom[genes.data$Chrom %in% c("M", "MT")] <- 26
-    genes.data$Chrom <- as.numeric(genes.data$Chrom)
+  if(!nonhuman){
+    if(!(class(genes.data$Chrom) %in% c("integer", "numeric"))){
+      genes.data$Chrom <- gsub(genes.data$Chrom, pattern = "chr", replacement = "")
+      genes.data$Chrom[genes.data$Chrom == "X"] <- 23
+      genes.data$Chrom[genes.data$Chrom == "Y"] <- 24
+      genes.data$Chrom[genes.data$Chrom %in% c("M", "MT")] <- 26
+      genes.data$Chrom <- as.numeric(genes.data$Chrom)
+    }
   }
-  
+
   # Get start and end regions for plotting and for pulling out data:
   if (all(is.na(region))) {
     region = get.region(lead.data, snp, genes.data, gene)

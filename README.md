@@ -69,6 +69,7 @@ As well as each of the following:
  - `nplots`: specify whether multiple results plots will be saved into your jpeg file (e.g. plot two GWAS results one above another; defaults to FALSE)
  - `ignore.lead`: specify whether to ignore the SNP with the smallest P and use the SNP specified by 'snp' to centre the plot (defaults to FALSE)
  - `rsid.check`: specify whether to check if the SNPs are labelled with rsIDs - should only matter if script is calculating LD for you (defaults to TRUE)
+ - `nonhuman`: specify whether the data to plot has come from a non-human sample-set (defaults to FALSE) - if the data going in is from a non-human species make sure the chromosome column is only numbers (e.g. 1 instead of chr1, 23 instead of X). 
 
 ## Secondary Example:
 
