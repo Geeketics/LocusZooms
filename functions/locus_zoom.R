@@ -53,6 +53,14 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   LD.colours <- data.frame(LD = as.character(seq(from = 0, to = 1, by = 0.1)), Colour = c("#000080",rep(c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), each = 2)), stringsAsFactors = FALSE)
   GENE.colours <- data.frame(Threshold = c(">2.6e-6", ">1e-10", ">1e-15", ">1e-20", "<1e-20"), Colour = c("#000080", "#87CEFA", "#00FF00", "#FFA500", "#FF0000"), stringsAsFactors = FALSE)
   
+  # load scales library
+  if("scales" %in% data.frame(installed.packages())[, "Package"]){
+    library("scales")
+  } else{
+    stop("This function requires the package 'scales' to run.\nUse install.packages('scales') to install the package before running this code again.")
+  }
+  
+  
   # Load Data
   # If plotting multiple summary stats, take the first summary stats as lead/reference data:
   if (is.data.frame(data)) {
@@ -215,8 +223,10 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
   par(mar = c(4, 4, 0.5, 8), mgp = c(2, 1, 0), xpd = FALSE)
   if(length(genes.data[, "Gene"]) > 15){
     track.max = 6
+    font.size = 0.45
   } else{
     track.max = 3
+    font.size = 0.6
   }
   plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, track.max))
 
@@ -241,7 +251,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     for(track in unique(genes.data$Y)){
       genes.set <- genes.data[genes.data$Y == track, ]
       if (nrow(genes.set) > 0) {
-        gene.position(genes.set)
+        gene.position(genes.set, fontsize = font.size)
       }
     }
   }
@@ -268,7 +278,7 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   
   # Plot SNP presence:
   par(mar = c(0, 4, 2, 8), mgp = c(2, 1, 0), xpd = FALSE)
-  plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, xlim = c(x.min, x.max), cex.lab = 0.8)
+  plot(x = data.plot$BP, y = rep(1, times = nrow(data.plot)), axes = FALSE, pch = "|", xlab = "", ylab = "Plotted\nSNPs", las = 2, xlim = c(x.min, x.max), cex.lab = 0.8, col = alpha(colour = "black", alpha = 0.2))
   title(plot.title, line = 0)
   
   # Plot Manhattan/LocusZoom of region
@@ -454,7 +464,7 @@ merge.gene.colour <- function(data, pvalues, GENE.colours) {
 
 
 # Function to plot the gene tracks and labels properly:
-gene.position <- function(data) {
+gene.position <- function(data, fontsize = 0.6) {
   odd = 1
   for (i in 1:length(data$Gene)) {
     lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = as.character(data$Colour[i]))
@@ -462,16 +472,16 @@ gene.position <- function(data) {
       length = abs(data$Start[i] - data$End[i])
       if(length > 5000) {
         if (odd%%2 == 0) {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 3, offset = 0.25)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 3, offset = 0.25)
         } else {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 1, offset = 0.3)
+          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 1, offset = 0.3)
         }
       }
     } else {
       if (odd%%2 == 0) {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 3, offset = 0.25)
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 3, offset = 0.25)
       } else {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = 0.6, pos = 1, offset = 0.3)
+        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 1, offset = 0.3)
       }
     }
     odd = odd + 1

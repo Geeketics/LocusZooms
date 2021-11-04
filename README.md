@@ -5,6 +5,8 @@
 
 This script creates an R function to create regional Manhattan plots with points coloured according to LD and genes annotated beneath. Three example input files are included for test purposes, along with an example .jpg output.
 
+This script has one package dependency: `scales`
+
   - Example.assoc.linear: A file of PLINK association results (only the "CHR", "SNP", "BP", and "P" columns are essential)
   - Example.ld: A file of the LD between the SNP to be labelled (top-hit / SNP of interest) and the SNPs included in the PLINK results file
     - this file MUST have a column called "SNP_B" (containing a list of all the SNPs in the results file) and a column called "R2" (containing the R^2 LD value of each SNP). The SNP names MUST match the names in the SNP column of the results file.
@@ -79,10 +81,10 @@ _This is not reproducible from the example data._
 locus.zoom(data = EUR_meta_full1_clean_rsid.nfiltered_chr7,
            gene = "MLXIPL",
            offset_bp = 500000,
-           genes.data = UCSC_GRCh37_Genes_UniqueList2017,
+           genes.data = Gencode_GRCh37_Genes_UniqueList2021,
            plot.title = "Association of MLXIPL with gout in Europeans",
            file.name = "alternateExample.jpg",
-           genes.pvalue = European_GWAS_2020_test.genes_named,
+           genes.pvalue = MAGMA_EUR_meta_full_Gencode2021,
            colour.genes = TRUE)
 ```
 
