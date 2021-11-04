@@ -85,7 +85,9 @@ locus.zoom(data = EUR_meta_full1_clean_rsid.nfiltered_chr7,
            plot.title = "Association of MLXIPL with gout in Europeans",
            file.name = "alternateExample.jpg",
            genes.pvalue = MAGMA_EUR_meta_full_Gencode2021,
-           colour.genes = TRUE)
+           colour.genes = TRUE,
+           psuedogenes = TRUE,
+           RNAs = TRUE)
 ```
 
 ![](alternateExample.jpg)
