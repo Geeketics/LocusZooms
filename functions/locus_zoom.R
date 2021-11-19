@@ -531,12 +531,14 @@ get.ld <- function(region, snp, population) {
   
   # gsub the command and filename for chr, start/end positions and the population:
   base.command = "source ~/.bashrc;
+  module load bcftools;
   bcftools view \
     --regions ZZ:Y1-Y2 \
     --output-type z \
     --output-file tmp.vcf.gz \
     /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/1000VCF;
 
+  module load plink;
   plink \
     --vcf tmp.vcf.gz \
     --allow-no-sex \
