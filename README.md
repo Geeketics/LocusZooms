@@ -67,7 +67,7 @@ As well as each of the following:
  - `genes.pvalue`: specify a data.frame of p-values (e.g. MAGMA results) associated with each gene (requires the columns "Gene" and "P") 
  - `colour.genes`: specify whether to colour genes based on a p-value provided in gene.pvalue (defaults to FALSE)
  - `population`: specify the 1000 genomes population to use when calculating LD if ld.file = NULL (defaults to "EUR", options are "AFR", "AMR", "EAS", "EUR", "SAS", "TAMA", and "ALL")
- - `sig.type`: specify whether the y-axis should be labelled as -log10(_P_) or log10(BF) (defaults to "P", options are "P" or "logBF")
+ - `sig.type`: specify whether the y-axis should be labelled as -log10(_P_) or log10(BF) (defaults to "P", options are "P", "logP", or "logBF"). For the "P" option an additional -log10 conversion of the input "P" column will be performed.
  - `nplots`: specify whether multiple results plots will be saved into your jpeg file (e.g. plot two GWAS results one above another; defaults to FALSE)
  - `ignore.lead`: specify whether to ignore the SNP with the smallest P and use the SNP specified by 'snp' to centre the plot (defaults to FALSE)
  - `rsid.check`: specify whether to check if the SNPs are labelled with rsIDs - should only matter if script is calculating LD for you (defaults to TRUE)
