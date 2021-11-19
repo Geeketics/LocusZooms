@@ -22,7 +22,7 @@
 ## genes.pvalue: specifies a data.frame of p-values associated with each gene (e.g. MAGMA results) - expects the headers Gene, P
 ## colour.genes: specifies whether to colour genes based on a p-value provided in gene.pvalue
 ## population: specifies the 1000 genomes population to use for LD (if script is calculating for you)
-## sig.type: specifies whether the y-axis should be -log10(P) or -log10(BF) - these are the only two options
+## sig.type: specifies whether the y-axis should be -log10(P) or -log10(BF) - the options are P (will be converted to -log10(P)), logP (no conversion needed), or logBF.
 ## nplots: specifies how many plots will be saved into a single jpeg (e.g. plot two GWAS results one above another, nplots = TRUE)
 ## ignore.lead: specifies whether to ignore the SNP with the smallest P and use the SNP specified by 'snp' to centre the plot
 ## rsid.check: specifies whether to check if the SNPs are labelled with rsIDs - should only matter if script is calculating LD for you
@@ -74,10 +74,16 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     if(!all(c("CHR", "BP", "SNP", "P") %in% names(lead.data))){
       stop("Your data file does not contain a CHR, BP, SNP, or P column.\nCheck your header line.")
     }
-  } else {
+  } else if(sig.type == "logP") {
+    if(!all(c("CHR", "BP", "SNP", "logP") %in% names(lead.data))){
+      stop("Your data file does not contain a CHR, BP, SNP, or logP column.\nCheck your header line.")
+    }
+  } else if(sig.type == "logBF") {
     if(!all(c("CHR", "BP", "SNP", "logBF") %in% names(lead.data))){
       stop("Your data file does not contain a CHR, BP, SNP, or logBF column.\nCheck your header line.")
-     }
+    }
+  } else {
+      stop("Unrecognised significance type. The options are P, logP, or logBF.")
   }
 
   lead.data$SNP = as.character(lead.data$SNP)
@@ -143,7 +149,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     data = subset.data(data, region)
     if (sig.type == "P") {
       data$logP = as.numeric(unlist(lapply(data$P, elog10)))
-    } else {
+    } else if (sig.type == "logBF") {
       data$logP = data$logBF
     }
     lead.data = data
@@ -283,7 +289,7 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   
   # Plot Manhattan/LocusZoom of region
   par(mar = c(0, 4, 0, 8), mgp = c(2, 1, 0), xpd = FALSE)
-  ylab = ifelse(sig.type == "P", expression(-log[10](italic(P))), expression(log[10](BF)))
+  ylab = ifelse(sig.type == "P" | sig.type == "logP", expression(-log[10](italic(P))), expression(log[10](BF)))
   plot(x = data.plot$BP, y = data.plot$logP, ylim = c(0, y.max*1.1), pch = 20, col = as.character(data.plot$Colour), xlab = "", ylab = ylab, cex = 0.8, xaxt = "n", xlim = c(x.min, x.max))
   abline(h = nominal, col = "blue", lty = "dashed")
   abline(h = significant, col = "red", lty = "dashed")
