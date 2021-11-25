@@ -234,7 +234,9 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     track.max = 3
     font.size = 0.6
   }
-  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, track.max))
+  plot(1, type = "n", yaxt = "n", xlab = paste("Position on Chromosome", lead.chr), ylab="", xlim = c(x.min, x.max), ylim = c(0, track.max), xaxt = "n")
+  x_marks = axTicks(side = 1)
+  axis(side = 1, at = x_marks, labels = format(x_marks, scientific = FALSE, big.mark = ",", trim = TRUE))
 
   if (nrow(genes.data) != 0) {
                        
@@ -257,7 +259,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
     for(track in unique(genes.data$Y)){
       genes.set <- genes.data[genes.data$Y == track, ]
       if (nrow(genes.set) > 0) {
-        gene.position(genes.set, fontsize = font.size)
+        gene.position(genes.set, fontsize = font.size, plot.var = plot.var)
       }
     }
   }
@@ -273,7 +275,7 @@ locus.zoom <- function(data = NULL, snp = NA, gene = NA, region = NA, ld.file = 
 }
 
 # Function to create LocusZoom style plot (without gene track):
-plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, significant = 7.3, secondary.snp = NA, secondary.label = FALSE, sig.type = "P", plot.var = NULL, ignore.lead = FALSE) {
+plot.locus <- function(data.plot = NULL, plot.title = NULL, secondary.snp = NA, secondary.label = FALSE, sig.type = "P", plot.var = NULL) {
   # Variables:
   y.max = as.numeric(plot.var[1])
   x.min = as.numeric(plot.var[2])
@@ -305,9 +307,10 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, nominal = 6, signifi
   
   # Plot label/text for the secondary SNP (removes lead.snp from the list of secondary SNPs before plotting)
   if(any(!is.na(secondary.snp))){
-    check = which(data.plot$SNP %in% c(secondary.snp, lead.snp))
+    secondary.snp <- secondary.snp[secondary.snp != lead.snp]
+    check = which(data.plot$SNP %in% secondary.snp)
     if (length(check) != 0) {
-      secondary.data = data.plot[check, ]
+      secondary.data = data.plot[data.plot$SNP %in% c(secondary.snp, lead.snp), ]
       plot.secondary.point(data = secondary.data, snps = secondary.data$SNP, lead.snp = lead.snp, plot.data = data.plot, plot.var = plot.var, label = secondary.label)
     }
   }
@@ -402,6 +405,8 @@ plot.secondary.point <- function(data, snps, lead.snp, plot.data, plot.var, labe
   lead.pos = data$BP[lead.ind]
   
   data = data[which(data$SNP != lead.snp), ]
+  data = data[data$BP >= plot.var[2] & data$BP <= plot.var[3]]
+  
   
   # plot red line around secondary SNP
   points(x = data$BP, y = data$logP, pch = 1, cex = 1.1, col = "#FF0000")
@@ -470,29 +475,44 @@ merge.gene.colour <- function(data, pvalues, GENE.colours) {
 
 
 # Function to plot the gene tracks and labels properly:
-gene.position <- function(data, fontsize = 0.6) {
+gene.position <- function(data, fontsize = 0.6, plot.var = NULL) {
+  # Variables:
+  x.min = as.numeric(plot.var[2])
+  x.max = as.numeric(plot.var[3])
+  plot.length = x.max - x.min
+  
+  # narrow down to genes to be labeled before working out whether to label above/below line
+  if(plot.length > 5000000) {
+    gene.length = 16000
+  } else if(plot.length > 2000000) {
+    gene.length = 12000
+  } else {
+    gene.length = 8000
+  }
+
+  if(length(data$Gene) >= 10) {
+    text_data <- data[abs(data$Start - data$End) > gene.length, ]
+  } else{
+    text_data <- data
+  }
+  
+  # add gene lines & labels to plot
   odd = 1
   for (i in 1:length(data$Gene)) {
     lines(x = c(data$Start[i], data$End[i]), y = c(data$Y[i], data$Y[i]), lwd = 3, col = as.character(data$Colour[i]))
-    if(length(data$Gene) >= 10){
-      length = abs(data$Start[i] - data$End[i])
-      if(length > 5000) {
-        if (odd%%2 == 0) {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 3, offset = 0.25)
-        } else {
-          text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 1, offset = 0.3)
-        }
-      }
+  }
+  
+  for(i in 1:length(text_data$Gene)) {
+    mid.point = (max(x.min, text_data$Start[i]) + min(text_data$End[i], x.max))/2
+    if (odd%%2 == 0) {
+      text(x = mid.point, y = text_data$Y[i], labels = text_data$Gene[i], font = 3, cex = fontsize, pos = 3, offset = 0.2)
     } else {
-      if (odd%%2 == 0) {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 3, offset = 0.25)
-      } else {
-        text(x = (data$Start[i] + data$End[i])/2, y = data$Y[i], labels = data$Gene[i], font = 3, cex = fontsize, pos = 1, offset = 0.3)
-      }
+      text(x = mid.point, y = text_data$Y[i], labels = text_data$Gene[i], font = 3, cex = fontsize, pos = 1, offset = 0.25)
     }
     odd = odd + 1
   }
 }
+
 
 # Function to convert string P-value into logged P:
 elog10 <- function(p) {
@@ -531,14 +551,12 @@ get.ld <- function(region, snp, population) {
   
   # gsub the command and filename for chr, start/end positions and the population:
   base.command = "source ~/.bashrc;
-  module load bcftools;
   bcftools view \
     --regions ZZ:Y1-Y2 \
     --output-type z \
     --output-file tmp.vcf.gz \
     /Volumes/archive/merrimanlab/reference_files/VCF/1000Genomes_vcf_files/Phase3_March2017/POP/1000VCF;
 
-  module load plink;
   plink \
     --vcf tmp.vcf.gz \
     --allow-no-sex \
