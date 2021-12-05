@@ -405,7 +405,7 @@ plot.secondary.point <- function(data, snps, lead.snp, plot.data, plot.var, labe
   lead.pos = data$BP[lead.ind]
   
   data = data[which(data$SNP != lead.snp), ]
-  data = data[data$BP >= plot.var[2] & data$BP <= plot.var[3]]
+  data = data[data$BP >= plot.var[2] & data$BP <= plot.var[3], ]
   
   
   # plot red line around secondary SNP
