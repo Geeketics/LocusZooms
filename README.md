@@ -21,8 +21,11 @@ Example.assoc.linear <- read.delim("Example.assoc.linear", stringsAsFactors = FA
 Example.ld <- read.table("Example.ld", stringsAsFactors = FALSE, header = TRUE)
 Unique.genes <- read.delim("Gencode_GRCh37_Genes_UniqueList2021.txt", stringsAsFactors = FALSE, header = TRUE)
 
-# load the locuszoom function into R
-source("functions/locus_zoom.R")
+# load the locuszoom functions into R
+for(script in c("check_rsid.R", "elog10.R", "gene_position.R", "get_ld.R", "get_region.R", "locus_zoom.R", "merge_gene_colour.R", "merge_plot_dat.R", "plot_locus.R", "plot_secondary_point.R", "subset_data.R")){
+  source(paste0("functions/", script))
+}
+rm(script)
 
 # create a LocusZoom-like plot
 locus.zoom(data = Example.assoc.linear,                                    # a data.frame (or a list of data.frames) with the columns CHR, BP, SNP, and P
@@ -59,11 +62,12 @@ As well as each of the following:
  - `offset_bp`: specify how far either side of the `snp`, `gene`, or `region` you want the plot to extend (defaults to 200000)
  - `psuedogenes`: when using one of the three gene lists in this repo you can specify whether you want to plot the pseudogenes (defaults to FALSE)
  - `RNAs`: when using one of the two gene lists created in 2021 in this repo you can specify whether you want to plot lncRNA and ncRNA genes (defaults to FALSE)
- - `plot.type`: specify the file format of the plot (defaults to "jpg", options are "jpg" or "svg")
+ - `plot.type`: specify the file format of the plot (defaults to "jpg", options are "jpg", "svg", or "view_only" which will not save the plot, but output it to RStudio Viewer instead)
  - `nominal`: specify the nominal significance level to draw on the plot (in -log10(_P_), default is 6 or _P_ = 1e-6)
  - `significant`: specify the significance level to draw on the plot (in -log10(_P_), default is 7.3 or _P_ = 5e-8) 
  - `secondary.snp`: provide the list of secondary SNP IDs (must match IDs in results file) to be highlighted on the plot
  - `secondary.label`: specify whether to label the secondary SNPs on the plot (defaults to FALSE)
+ - `secondary.circle`: specify whether to add a red circle around the secondary SNPs on the plot (defaults to TRUE)
  - `genes.pvalue`: specify a data.frame of p-values (e.g. MAGMA results) associated with each gene (requires the columns "Gene" and "P") 
  - `colour.genes`: specify whether to colour genes based on a p-value provided in gene.pvalue (defaults to FALSE)
  - `population`: specify the 1000 genomes population to use when calculating LD if ld.file = NULL (defaults to "EUR", options are "AFR", "AMR", "EAS", "EUR", "SAS", "TAMA", and "ALL")
@@ -71,7 +75,8 @@ As well as each of the following:
  - `nplots`: specify whether multiple results plots will be saved into your jpeg file (e.g. plot two GWAS results one above another; defaults to FALSE)
  - `ignore.lead`: specify whether to ignore the SNP with the smallest P and use the SNP specified by 'snp' to centre the plot (defaults to FALSE)
  - `rsid.check`: specify whether to check if the SNPs are labelled with rsIDs - should only matter if script is calculating LD for you (defaults to TRUE)
- - `nonhuman`: specify whether the data to plot has come from a non-human sample-set (defaults to FALSE) - if the data going in is from a non-human species make sure the chromosome column is only numbers (e.g. 1 instead of chr1, 23 instead of X). 
+ - `nonhuman`: specify whether the data to plot has come from a non-human sample-set (defaults to FALSE) - if the data going in is from a non-human species make sure the chromosome column is only numbers (e.g. 1 instead of chr1, 23 instead of X).
+
 
 ## Secondary Example:
 
