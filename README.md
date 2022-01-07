@@ -59,11 +59,12 @@ As well as each of the following:
  - `offset_bp`: specify how far either side of the `snp`, `gene`, or `region` you want the plot to extend (defaults to 200000)
  - `psuedogenes`: when using one of the three gene lists in this repo you can specify whether you want to plot the pseudogenes (defaults to FALSE)
  - `RNAs`: when using one of the two gene lists created in 2021 in this repo you can specify whether you want to plot lncRNA and ncRNA genes (defaults to FALSE)
- - `plot.type`: specify the file format of the plot (defaults to "jpg", options are "jpg" or "svg")
+- `plot.type`: specify the file format of the plot (defaults to "jpg", options are "jpg", "svg", or "view_only" which will not save the plot, but output it to RStudio Viewer instead)
  - `nominal`: specify the nominal significance level to draw on the plot (in -log10(_P_), default is 6 or _P_ = 1e-6)
  - `significant`: specify the significance level to draw on the plot (in -log10(_P_), default is 7.3 or _P_ = 5e-8) 
  - `secondary.snp`: provide the list of secondary SNP IDs (must match IDs in results file) to be highlighted on the plot
  - `secondary.label`: specify whether to label the secondary SNPs on the plot (defaults to FALSE)
+ - `secondary.circle`: specify whether to add a red circle around the secondary SNPs on the plot (defaults to TRUE)
  - `genes.pvalue`: specify a data.frame of p-values (e.g. MAGMA results) associated with each gene (requires the columns "Gene" and "P") 
  - `colour.genes`: specify whether to colour genes based on a p-value provided in gene.pvalue (defaults to FALSE)
  - `population`: specify the 1000 genomes population to use when calculating LD if ld.file = NULL (defaults to "EUR", options are "AFR", "AMR", "EAS", "EUR", "SAS", "TAMA", and "ALL")
