@@ -341,7 +341,7 @@ plot.locus <- function(data.plot = NULL, plot.title = NULL, secondary.snp = NA, 
 ##### Function to check if the input variants have rsIDs ####
 check.rsid <- function(snp = NULL) {
   # Stop if CHR:POS ID:
-  if (all(!grepl('rs', snp))) {
+  if (any(!grepl('rs', snp))) {
     stop("Your SNP column does not have rsIDs")
   }
   # Stop if there are duplicate SNPs:
