@@ -1,9 +1,15 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5154379.svg)](https://doi.org/10.5281/zenodo.5154379)
 
-# LocusZooms
+# LocusZoom-like Plots for GWAS Results
+Authors: Tanya J Major and Riku Takei
+
 ## Make LocusZoom-like plots with your own LD matrix.
 
-This script creates an R function to create regional Manhattan plots with points coloured according to LD and genes annotated beneath. Three example input files are included for test purposes, along with an example .jpg output.
+This package allows the user to create regional Manhattan plots from p-values, log(p-values), or log(Bayes Factors) with points coloured according to LD and genes annotated beneath. The LD input can be generated from the users own data (e.g. for a non-reference population). The package comes with a number of reference files for gene annotation, but is not limited to the use of these files.
+
+This package was created for use with human SNP data, but can be used to plot non-human data.
+
+This script creates an R function to create LocusZoom-like plots. Three example input files are included for test purposes, along with an example .jpg output.
 
 This script has one package dependency: `scales`
 
